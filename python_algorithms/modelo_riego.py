@@ -17,7 +17,7 @@ sys.setrecursionlimit(100_000)
 
 from typing import List, Tuple, Dict
 
-from tablon import Tablon, construir_tablones
+from tablon import construir_tablones
 from costo_tablon import calcular_costo_tablon
 from utils_bits import (
     bitmask_todos_pendientes,
@@ -98,7 +98,7 @@ def roFB(finca: List[Tuple[int, int, int, int]]) -> Tuple[List[int], int]:
             costo_total = costo_de_regar_idx_ahora + costo_del_resto
 
             # Selección del mínimo global con desempate lexicográfico DESCENDENTE
-            # (cuando hay múltiples órdenes con el mismo costo, se elige el lexicográficamente mayor)
+            # (cuando hay múltiples órdenes con el mismo costoo, se elige el lexicográficamente mayor)
             orden_candidata = [idx] + orden_del_resto
             if (costo_total < mejor_costo or 
                 (costo_total == mejor_costo and orden_candidata > mejor_orden)):
@@ -112,107 +112,122 @@ def roFB(finca: List[Tuple[int, int, int, int]]) -> Tuple[List[int], int]:
     return orden_final, costo_final
 
 
+
 # ──────────────────────────────────────────────────────────────────────
 # Algoritmo 2: Voraz (roV)
 # ──────────────────────────────────────────────────────────────────────
 
 def roV(finca: List[Tuple[int, int, int, int]]) -> Tuple[List[int], int]:
     """
-    Algoritmo Voraz Recursivo (con Simulación Heurística Avanzada).
+    Algoritmo Voraz con Método Piloto (Lookahead) y Heurística WMDD.
 
-    ENTRADAS y SALIDAS:
-    -------------------
-    finca : Lista de tuplas (tc, ts, tr, cp).
-    Retorna (orden_final, costo_total).
+    ENTRADAS:
+    ----------
+    finca : List[Tuple[int, int, int, int]]
+        Lista de tablones, donde cada tupla contiene:
+        - tc: Tiempo de crecimiento (no afecta el costo directamente).
+        - ts: Tiempo de supervivencia (límite antes de empezar a perder valor).
+        - tr: Tiempo de regado (duración de la tarea).
+        - cp: Coeficiente de prioridad (peso del tablón en el costo).
 
-    LÓGICA DEL ALGORITMO (Voraz Puro con Lookahead):
-    -------------------------------------------------
-    El algoritmo toma decisiones irrevocables paso a paso mediante recursión:
-      1. Caso base: Si no hay pendientes, retorna costo 0.
-      2. Evaluación: Para cada tablón, simula "qué pasaría si lo elijo". 
-         El futuro se simula asumiendo que el resto se regará siguiendo una 
-         heurística estática estricta (Urgencia -> Prioridad -> Rapidez).
-      3. Elección: Se selecciona el tablón cuyo impacto proyectado 
-         (costo inmediato + costo del futuro simulado) sea el mínimo absoluto.
-      4. Recursión: Se compromete con esa decisión y avanza al siguiente paso.
+    SALIDAS:
+    ----------
+    Tuple[List[int], int]
+        - orden_final: Una lista con los índices de los tablones en el orden 
+          heurístico decidido para minimizar el costo.
+        - costo_final: El valor entero del costo total alcanzado por la heurística.
 
-    MEJORA DE PRECISIÓN (Heurística Multicriterio):
-    ------------------------------------------------
-    Para que la simulación sea muy precisa, el ordenamiento de los tablones 
-    restantes no solo mira cuándo se marchitan (ts - tr), sino que da peso 
-    a la prioridad (cp). Esto acerca drásticamente el resultado al óptimo.
+    LÓGICA DEL ALGORITMO:
+    ----------------------
+    Evita la "miopía" clásica de los algoritmos voraces evaluando no solo el 
+    costo inmediato, sino el "daño en cadena" proyectado sobre el resto de la finca.
+    
+    1. En cada etapa, toma a cada tablón candidato y calcula su costo inmediato.
+    2. Aplica el "Método Piloto" (Simulación Lookahead): Avanza el tiempo simulando 
+       que el candidato fue elegido.
+    3. Para simular el impacto en el resto de los tablones pendientes, los ordena 
+       rápidamente usando la heurística WMDD (Weighted Modified Due Date). Esta 
+       regla penaliza severamente los tablones con alta prioridad y poco margen de 
+       supervivencia frente al tiempo proyectado.
+    4. Suma el costo inmediato y el costo del escenario futuro simulado para 
+       obtener un 'score_total'.
+    5. En caso de empates en el score, desempata de forma lexicográfica DESCENDENTE 
+       (elige el tablón con el índice mayor) para mantener consistencia con los 
+       algoritmos exactos.
+    6. Selecciona de forma irrevocable el tablón con el menor 'score_total' y 
+       avanza al siguiente turno.
 
     ANÁLISIS DE COMPLEJIDAD:
-    ------------------------
-    - COMPLEJIDAD TEÓRICA ESPERADA: O(n log n)
-    - COMPLEJIDAD REAL: O(n³ log n)
-      Justificación: La recursión tiene una profundidad de n. En cada nivel, 
-      iteramos sobre hasta n candidatos. Por cada candidato, la simulación 
-      ordena hasta n elementos restantes con sorted(), lo que toma O(n log n).
-      Total: n * n * (n log n) = O(n³ log n). 
-      Se asume esta complejidad deliberadamente para maximizar la cercanía al 
-      óptimo global dentro del paradigma voraz.
+    -------------------------
+    - COMPLEJIDAD TEÓRICA: O(n^3 log n)
+    - COMPLEJIDAD REAL: O(n^3 log n)
+    - JUSTIFICACIÓN: El algoritmo ejecuta un bucle principal para tomar 'n' 
+      decisiones. Por cada decisión, evalúa hasta 'n' candidatos posibles. 
+      Para cada candidato, simula el futuro ordenando los tablones restantes, 
+      lo cual toma O(n log n), y luego suma linealmente sus costos O(n). 
+      El costo dominante es n * n * (n log n) = O(n^3 log n). 
+      Esta complejidad le permite escalar fluidamente a cientos de tablones en 
+      fracciones de segundo, sin requerir la memoria exponencial O(2^n) de la 
+      Programación Dinámica, manteniendo un margen de error mínimo respecto al óptimo.
     """
     n = len(finca)
     if n == 0:
         return [], 0
-
+        
     tablones = construir_tablones(finca)
+    pendientes = list(range(n))
+    tiempo_actual = 0
+    orden_final = []
+    costo_total = 0
     
-    # ── MEJORA AQUI: Heurística multicriterio para la simulación ──
-    # 1. Menor margen de supervivencia (ts - tr)
-    # 2. Mayor prioridad (-cp) para que los más valiosos vayan primero
-    # 3. Menor tiempo de regado (tr) como último desempate
-    clave_orden = [
-        (t.tiempo_supervivencia - t.tiempo_regado, -t.prioridad, t.tiempo_regado) 
-        for t in tablones
-    ]
-
-    def paso_voraz(pendientes: List[int], tiempo_actual: int) -> Tuple[List[int], int]:
-        # 1. CASO BASE
-        if not pendientes:
-            return [], 0
-
+    while pendientes:
         mejor_idx = -1
-        mejor_impacto_proyectado = float('inf')
-
-        # 2. EVALUACIÓN Y SIMULACIÓN
-        for i in pendientes:
-            tab_i = tablones[i]
-            costo_ahora = calcular_costo_tablon(tab_i, tiempo_actual)
-            t_simulado = tiempo_actual + tab_i.tiempo_regado
-
-            # Simular el futuro ordenando los restantes con la clave avanzada
-            resto = sorted([j for j in pendientes if j != i], key=lambda x: clave_orden[x])
+        mejor_score = float('inf')
+        
+        for idx in pendientes:
+            tab_i = tablones[idx]
+            costo_i_ahora = calcular_costo_tablon(tab_i, tiempo_actual)
             
+            # --- MÉTODO PILOTO: SIMULACIÓN DEL HORIZONTE COMPLETO ---
+            t_sim = tiempo_actual + tab_i.tiempo_regado
+            resto = [j for j in pendientes if j != idx]
+            
+            # Heurística WMDD (Weighted Modified Due Date)
+            resto_ordenado = sorted(resto, key=lambda j: 
+                max(
+                    tablones[j].tiempo_supervivencia - tablones[j].tiempo_regado, 
+                    t_sim + tablones[j].tiempo_regado
+                ) / tablones[j].prioridad
+            )
+            
+            # Simulamos el costo en cadena para el resto de la finca
             costo_futuro = 0
-            for j in resto:
-                tab_j = tablones[j]
-                costo_futuro += calcular_costo_tablon(tab_j, t_simulado)
-                t_simulado += tab_j.tiempo_regado
-
-            impacto_total = costo_ahora + costo_futuro
-
-            if impacto_total < mejor_impacto_proyectado:
-                mejor_impacto_proyectado = impacto_total
-                mejor_idx = i
-
-        # 3. RECURSIÓN Y AVANCE IRREVOCABLE
+            t_temp = t_sim
+            for j in resto_ordenado:
+                costo_futuro += calcular_costo_tablon(tablones[j], t_temp)
+                t_temp += tablones[j].tiempo_regado
+                
+            # Métrica maestra de decisión
+            score_total = costo_i_ahora + costo_futuro
+            
+            # Búsqueda del menor daño global
+            if score_total < mejor_score:
+                mejor_score = score_total
+                mejor_idx = idx
+            elif score_total == mejor_score:
+                # Desempate lexicográfico DESCENDENTE para consistencia con FB y PD
+                if idx > mejor_idx:
+                    mejor_idx = idx
+                    
+        # --- APLICAR DECISIÓN VORAZ IRREVOCABLE ---
         tab_elegido = tablones[mejor_idx]
-        costo_real_de_este_paso = calcular_costo_tablon(tab_elegido, tiempo_actual)
+        costo_total += calcular_costo_tablon(tab_elegido, tiempo_actual)
+        tiempo_actual += tab_elegido.tiempo_regado
         
-        siguientes_pendientes = [p for p in pendientes if p != mejor_idx]
+        orden_final.append(mejor_idx)
+        pendientes.remove(mejor_idx)
         
-        orden_resto, costo_resto = paso_voraz(
-            siguientes_pendientes, 
-            tiempo_actual + tab_elegido.tiempo_regado
-        )
-
-        # 4. CONSTRUIR SOLUCIÓN
-        return [mejor_idx] + orden_resto, costo_real_de_este_paso + costo_resto
-
-    return paso_voraz(list(range(n)), 0)
-
+    return orden_final, costo_total
 
 # ──────────────────────────────────────────────────────────────────────
 # Algoritmo 3: Programación Dinámica (roPD)

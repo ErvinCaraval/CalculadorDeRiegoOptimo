@@ -14,7 +14,18 @@ def parsear_finca_desde_archivo(ruta_archivo: str) -> List[Tuple[int, int, int, 
     """
     Lee una finca desde un archivo de texto.
 
-    Formato esperado:
+    ENTRADAS:
+    ----------
+    ruta_archivo : str
+        Ruta absoluta o relativa del archivo de texto a leer.
+
+    SALIDAS:
+    ----------
+    List[Tuple[int, int, int, int]]
+        Lista de tablones representados como tuplas (ts, tr, p, ro).
+
+    FORMATO ESPERADO:
+    ------------------
         n
         ts0,tr0,p0,ro0
         ts1,tr1,p1,ro1
@@ -48,7 +59,22 @@ def escribir_resultado_a_archivo(ruta_archivo: str, orden: List[int], costo: int
     """
     Escribe el resultado de la programación de riego a un archivo.
 
-    Formato de salida:
+    ENTRADAS:
+    ----------
+    ruta_archivo : str
+        Ruta absoluta o relativa del archivo donde se guardará la salida.
+    orden : List[int]
+        Lista con el orden de los índices de los tablones regados.
+    costo : int
+        Costo total obtenido por el algoritmo.
+
+    SALIDAS:
+    ----------
+    None
+        Genera un archivo de texto en la ruta especificada.
+
+    FORMATO DE SALIDA:
+    -------------------
         Costo
         pi0
         pi1

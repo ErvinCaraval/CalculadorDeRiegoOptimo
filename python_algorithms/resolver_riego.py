@@ -3,7 +3,20 @@
 Script ejecutable para resolver el problema del riego óptimo.
 Actúa como la interfaz de línea de comandos (CLI) principal.
 
-Uso:
+ENTRADAS (Argumentos CLI):
+---------------------------
+    1. algoritmo      : "FB", "V", o "PD".
+    2. archivo_entrada: Ruta del archivo .txt con los datos de la finca.
+    3. archivo_salida : Ruta del archivo .txt donde se guardará el resultado.
+
+SALIDAS:
+---------
+    - Escribe el resultado óptimo en 'archivo_salida'.
+    - Imprime en la salida estándar (stdout): "SUCCESS|<algoritmo>|<tiempo_ms>ms"
+    - En caso de error, imprime en (stderr): "ERROR: <mensaje>"
+
+USO:
+----
     python resolver_riego.py <algoritmo> <archivo_entrada> <archivo_salida>
 """
 

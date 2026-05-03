@@ -18,6 +18,20 @@ def calcular_costo_tablon(tablon: Tablon, tiempo_inicio_riego: int) -> int:
     """
     Calcula el costo de riego para un tablón según las reglas del enunciado.
 
+    ENTRADAS:
+    ----------
+    tablon : Tablon
+        Instancia inmutable con los datos del tablón a regar.
+    tiempo_inicio_riego : int
+        Día/tiempo en el que se comienza a regar este tablón.
+
+    SALIDAS:
+    ----------
+    int
+        Costo penalizado calculado para este tablón.
+
+    REGLAS DE COSTO:
+    -----------------
     Caso 1 – Riego en tiempo óptimo:
         costo = ts − (t_inicio + tr)
 

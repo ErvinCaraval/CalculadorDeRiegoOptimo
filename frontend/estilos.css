@@ -1046,3 +1046,65 @@ body::before {
         font-size: 1.2rem;
     }
 }
+
+/* ================================================================
+   MODAL COMPARACION
+   ================================================================ */
+.comparacion-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-md);
+    margin-bottom: var(--space-md);
+}
+
+.comp-columna {
+    background: var(--bg-dark);
+    padding: var(--space-md);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+}
+
+.comp-columna h4 {
+    margin-bottom: var(--space-sm);
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    font-size: 1.1rem;
+}
+
+.comp-dato {
+    margin-bottom: var(--space-xs);
+    font-size: 0.95rem;
+    color: var(--text-primary);
+}
+
+.comp-dato strong {
+    color: var(--text-secondary);
+}
+
+.comp-resultado {
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-xs);
+    background: var(--bg-dark);
+    border: 1px solid transparent;
+}
+
+.comp-resultado.exito {
+    border-color: var(--success);
+    background: rgba(16, 185, 129, 0.1);
+}
+
+.comp-resultado.error {
+    border-color: var(--danger);
+    background: rgba(239, 68, 68, 0.1);
+}
+
+@media (max-width: 600px) {
+    .comparacion-grid {
+        grid-template-columns: 1fr;
+    }
+}

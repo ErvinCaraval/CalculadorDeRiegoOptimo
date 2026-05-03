@@ -16,6 +16,7 @@
 
 let tablones = [];
 let solucionActual = null;
+let salidaEsperadaActual = null;
 
 console.log('Variables globales inicializadas');
 
@@ -53,11 +54,7 @@ function mostrarError(mensaje) {
     const toast = document.createElement('div');
     toast.className = 'toast error';
     toast.innerHTML = `
-        <svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"/>
-            <line x1="15" y1="9" x2="9" y2="15"/>
-            <line x1="9" y1="9" x2="15" y2="15"/>
-        </svg>
+        <i class="ph-fill ph-warning-circle toast-icon" style="font-size: 24px;"></i>
         <span class="toast-message">${mensaje}</span>
     `;
     
@@ -183,9 +180,7 @@ function agregarTablon(datosPredefinidos = null) {
         <td><input type="number" class="ro" min="0" value="${datosPredefinidos?.ro || 0}" required></td>
         <td>
             <button class="btn-delete" onclick="eliminarTablon(this)">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
-                </svg>
+                <i class="ph ph-trash" style="font-size: 18px;"></i>
             </button>
         </td>
     `;
@@ -210,6 +205,9 @@ function agregarTablon(datosPredefinidos = null) {
 
     inputTs.addEventListener('change', actualizarMaxRo);
     inputTr.addEventListener('change', actualizarMaxRo);
+    
+    // Si se modifica manualmente, invalidamos la salida esperada actual
+    fila.addEventListener('input', () => salidaEsperadaActual = null);
 
     cuerpoTabla.appendChild(fila);
     actualizarNumerosTablones();
@@ -293,6 +291,7 @@ function limpiarTablones() {
     
     // Limpiar variables globales
     solucionActual = null;
+    salidaEsperadaActual = null;
     tablones = [];
     
     // Resetear formulario manual
@@ -375,6 +374,10 @@ async function resolverProblema() {
         // Mostrar resultados
         mostrarResultados(datos, tablones);
         ocultarCargando();
+        
+        if (salidaEsperadaActual) {
+            mostrarComparacion(datos, salidaEsperadaActual);
+        }
 
     } catch (error) {
         ocultarCargando();
@@ -422,6 +425,44 @@ function mostrarResultados(datos, tablones) {
 
     // Scroll a resultados
     seccion.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+/**
+ * Muestra el modal de comparación entre salida obtenida y esperada
+ */
+function mostrarComparacion(obtenida, esperada) {
+    const cuerpo = document.getElementById('cuerpoComparacion');
+    
+    let html = `
+        <div class="comparacion-grid">
+            <div class="comp-columna">
+                <h4 style="color: var(--primary);"><i class="ph-fill ph-check-circle"></i> Salida Obtenida</h4>
+                <div class="comp-dato"><strong>Costo:</strong> ${obtenida.costo}</div>
+                <div class="comp-dato"><strong>Permutación:</strong><br>[${obtenida.permutacion.join(', ')}]</div>
+            </div>
+            <div class="comp-columna">
+                <h4 style="color: var(--secondary);"><i class="ph-fill ph-target"></i> Salida Esperada</h4>
+                <div class="comp-dato"><strong>Costo:</strong> ${esperada.costo}</div>
+                <div class="comp-dato"><strong>Permutación:</strong><br>[${esperada.permutacion.join(', ')}]</div>
+            </div>
+        </div>
+    `;
+    
+    const esIgual = obtenida.costo === esperada.costo && 
+                    JSON.stringify(obtenida.permutacion) === JSON.stringify(esperada.permutacion);
+                    
+    if (esIgual) {
+        html += `<div class="comp-resultado exito" style="color: var(--success); margin-top: var(--space-md); text-align: center; font-weight: 600;"><i class="ph-fill ph-check-circle"></i> ¡Los resultados coinciden exactamente!</div>`;
+    } else {
+        html += `<div class="comp-resultado error" style="color: var(--danger); margin-top: var(--space-md); text-align: center; font-weight: 600;"><i class="ph-fill ph-warning-circle"></i> Hay diferencias en los resultados.</div>`;
+    }
+    
+    cuerpo.innerHTML = html;
+    document.getElementById('modalComparacion').style.display = 'flex';
+}
+
+function cerrarComparacion() {
+    document.getElementById('modalComparacion').style.display = 'none';
 }
 
 /**
@@ -598,6 +639,7 @@ function cargarArchivo() {
 
             // Limpiar tablones existentes
             tablones = [];
+            salidaEsperadaActual = null;
             const cuerpoTabla = document.getElementById('cuerpoTabla');
             cuerpoTabla.innerHTML = '';
 
@@ -652,7 +694,11 @@ async function cargarEjemplos() {
         const listado = document.getElementById('listadoEjemplos');
         listado.innerHTML = '';
 
-        const keys = Object.keys(ejemplos);
+        const keys = Object.keys(ejemplos).sort((a, b) => {
+            const numA = parseInt(a.replace(/\D/g, '')) || 0;
+            const numB = parseInt(b.replace(/\D/g, '')) || 0;
+            return numA - numB;
+        });
         if (keys.length === 0) {
             listado.innerHTML = '<p class="empty-msg">No se encontraron archivos de ejemplo en data/ejemplos/</p>';
         } else {
@@ -665,12 +711,11 @@ async function cargarEjemplos() {
                         <h4>${datos.nombre}</h4>
                         <span>${datos.tablones.length} tablones</span>
                     </div>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polyline points="9 18 15 12 9 6"/>
-                    </svg>
+                    <i class="ph-bold ph-caret-right" style="font-size: 20px; color: var(--text-muted);"></i>
                 `;
                 card.addEventListener('click', () => {
                     cargarFinca(datos.tablones);
+                    salidaEsperadaActual = datos.salidaEsperada;
                     cerrarModal();
                 });
                 listado.appendChild(card);
@@ -703,6 +748,8 @@ function inicializar() {
     document.getElementById('btnLimpiar').addEventListener('click', limpiarTablones);
     document.getElementById('btnCargarEjemplo').addEventListener('click', cargarEjemplos);
     document.getElementById('btnCerrarModal').addEventListener('click', cerrarModal);
+    const btnCerrarComp = document.getElementById('btnCerrarComparacion');
+    if (btnCerrarComp) btnCerrarComp.addEventListener('click', cerrarComparacion);
     document.getElementById('btnEjecutar').addEventListener('click', resolverProblema);
     document.getElementById('btnDescargar').addEventListener('click', descargarSolucion);
     
@@ -712,8 +759,10 @@ function inicializar() {
 
     // Cerrar modal al hacer click afuera
     window.addEventListener('click', (e) => {
-        const modal = document.getElementById('modalEjemplo');
-        if (e.target === modal) cerrarModal();
+        const modalEjemplo = document.getElementById('modalEjemplo');
+        const modalComparacion = document.getElementById('modalComparacion');
+        if (e.target === modalEjemplo) cerrarModal();
+        if (e.target === modalComparacion) cerrarComparacion();
     });
 
     // Evento para el área de upload

@@ -1,8 +1,7 @@
 """
 Utilidades para el manejo de máscaras de bits (Bitmask)
 """
-from typing import List, Tuple, Dict
-
+from typing import Generator
 
 """
 ====================================================================
@@ -36,7 +35,21 @@ Queremos apagar el bombillo 'i' a distancia sin tocar los demás:
 """
 
 def tablon_esta_pendiente(pendientes: int, idx_tablon: int) -> bool:
-    """Retorna True si el tablón `idx_tablon` aún no ha sido regado."""
+    """
+    Retorna True si el tablón `idx_tablon` aún no ha sido regado.
+
+    ENTRADAS:
+    ----------
+    pendientes : int
+        Bitmask que representa el estado actual de los tablones.
+    idx_tablon : int
+        Índice del tablón a consultar.
+
+    SALIDAS:
+    ----------
+    bool
+        True si el bit está encendido (1), False si está apagado (0).
+    """
     return bool((pendientes >> idx_tablon) & 1)
 
 
@@ -44,17 +57,37 @@ def marcar_tablon_como_regado(pendientes: int, idx_tablon: int) -> int:
     """
     Retorna un nuevo bitmask con el tablón `idx_tablon` marcado como regado.
     Usa XOR para apagar el bit correspondiente.
+
+    ENTRADAS:
+    ----------
+    pendientes : int
+        Bitmask que representa el estado actual de los tablones.
+    idx_tablon : int
+        Índice del tablón que se acaba de regar.
+
+    SALIDAS:
+    ----------
+    int
+        Nuevo estado del bitmask con el bit apagado.
     """
     return pendientes ^ (1 << idx_tablon)
 
 
-def tablones_pendientes_en(pendientes: int, total_tablones: int):
+def tablones_pendientes_en(pendientes: int, total_tablones: int) -> Generator[int, None, None]:
     """
-    Generador que yield-ea los índices de tablones que aún están pendientes.
+    Generador que emite los índices de tablones que aún están pendientes.
 
-    Args:
-        pendientes:      bitmask del estado actual
-        total_tablones:  cantidad total de tablones en la finca
+    ENTRADAS:
+    ----------
+    pendientes : int
+        Bitmask del estado actual.
+    total_tablones : int
+        Cantidad total de tablones en la finca.
+
+    SALIDAS:
+    ----------
+    Generator[int, None, None]
+        Secuencia de índices correspondientes a los tablones sin regar.
     """
     for idx in range(total_tablones):
         if tablon_esta_pendiente(pendientes, idx):
@@ -64,6 +97,16 @@ def tablones_pendientes_en(pendientes: int, total_tablones: int):
 def bitmask_todos_pendientes(total_tablones: int) -> int:
     """
     Retorna el bitmask inicial donde TODOS los tablones están pendientes.
-    Ejemplo: 4 tablones → 0b1111 = 15
+    Ejemplo: 4 tablones -> 0b1111 = 15
+
+    ENTRADAS:
+    ----------
+    total_tablones : int
+        Cantidad total de tablones en la finca.
+
+    SALIDAS:
+    ----------
+    int
+        Entero cuyo valor binario tiene 'total_tablones' bits encendidos en 1.
     """
     return (1 << total_tablones) - 1
