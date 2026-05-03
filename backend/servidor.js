@@ -7,7 +7,7 @@
  * - Ejecuta el script de Python con el algoritmo especificado
  * - Parsea y devuelve los resultados al cliente
  * 
- * Autor: Proyecto de curso - Análisis de Algoritmos II
+ * Autor: Ervin Caravali Ibarra Camilo Urrea 
  */
 
 const express = require('express');
