@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Optimizador de Riego - Sistema de Planificación</title>
+    <link rel="stylesheet" href="estilos.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-content">
+                <div class="logo-section">
+                    <div class="logo-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+                        </svg>
+                    </div>
+                    <div class="logo-text">
+                        <h1>Optimizador de Riego</h1>
+                        <span class="subtitle">Sistema de Planificación Agrícola</span>
+                    </div>
+                </div>
+                <div class="header-badge">
+                </div>
+            </div>
+        </header>
+
+        <main class="app-main">
+            <!-- Panel de Control Izquierdo -->
+            <aside class="sidebar">
+                <!-- Sección de Datos -->
+                <div class="sidebar-section">
+                    <h2 class="section-title">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="3" width="18" height="18" rx="2" />
+                            <path d="M3 9h18M9 21V9" />
+                        </svg>
+                        Datos de la Finca
+                    </h2>
+
+                    <div class="action-buttons">
+                        <button class="btn btn-secondary" id="btnLimpiar">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path
+                                    d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+                            </svg>
+                            Limpiar
+                        </button>
+                        <button class="btn btn-accent" id="btnCargarEjemplo">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" />
+                            </svg>
+                            Ejemplos
+                        </button>
+                        <button class="btn btn-outline" id="btnAgregarTablon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10" />
+                                <path d="M12 8v8M8 12h8" />
+                            </svg>
+                            Nuevo
+                        </button>
+                    </div>
+
+
+
+                    <!-- Upload Area -->
+                    <div class="upload-area" id="uploadArea">
+                        <input type="file" id="inputArchivo" accept=".txt" hidden>
+                        <div class="upload-content" onclick="document.getElementById('inputArchivo').click()">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                                <polyline points="17 8 12 3 7 8" />
+                                <line x1="12" y1="3" x2="12" y2="15" />
+                            </svg>
+                            <span>Subir archivo .txt</span>
+                            <small>o arrastra y suelta</small>
+                        </div>
+                    </div>
+
+                    <div class="format-hint">
+                        <span class="hint-label">Formato:</span>
+                        <code>n\nts,tr,p,ro\n...</code>
+                    </div>
+                </div>
+
+                <!-- Sección de Algoritmo -->
+                <div class="sidebar-section">
+                    <h2 class="section-title">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polygon points="12 2 2 7 12 12 22 7 12 2" />
+                            <polyline points="2 17 12 22 22 17" />
+                            <polyline points="2 12 12 17 22 12" />
+                        </svg>
+                        Algoritmo
+                    </h2>
+
+                    <div class="algorithm-options">
+                        <label class="algorithm-option">
+                            <input type="radio" name="algoritmo" value="V" checked>
+                            <div class="option-card">
+                                <div class="option-header">
+                                    <span class="option-name">Voraz</span>
+                                    <span class="option-badge fast">Rápido</span>
+                                </div>
+                                <span class="option-desc">Heurística óptima para datos grandes</span>
+                            </div>
+                        </label>
+
+                        <label class="algorithm-option">
+                            <input type="radio" name="algoritmo" value="FB">
+                            <div class="option-card">
+                                <div class="option-header">
+                                    <span class="option-name">Fuerza Bruta</span>
+                                    <span class="option-badge slow">Pequeño</span>
+                                </div>
+                                <span class="option-desc">Exhaustivo - solo hasta 8 tablones</span>
+                            </div>
+                        </label>
+
+                        <label class="algorithm-option">
+                            <input type="radio" name="algoritmo" value="PD">
+                            <div class="option-card">
+                                <div class="option-header">
+                                    <span class="option-name">Dinámica</span>
+                                    <span class="option-badge medium">Medio</span>
+                                </div>
+                                <span class="option-desc">Memoización - hasta 20 tablones</span>
+                            </div>
+                        </label>
+                    </div>
+
+                    <button class="btn btn-primary btn-execute" id="btnEjecutar">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polygon points="5 3 19 12 5 21 5 3" />
+                        </svg>
+                        Optimizar Riego
+                    </button>
+                </div>
+            </aside>
+
+            <!-- Panel Principal -->
+            <div class="main-content">
+                <!-- Tabla de Tablones -->
+                <section class="data-panel">
+                    <div class="panel-header">
+                        <h2>Tablones de la Finca</h2>
+                        <span class="table-count" id="tableCount">0 tablones</span>
+                    </div>
+
+                    <div class="table-container">
+                        <table class="data-table" id="tablaTablones">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>TS <small>(días)</small></th>
+                                    <th>TR <small>(días)</small></th>
+                                    <th>P <small>(1-4)</small></th>
+                                    <th>RO <small>(día)</small></th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="cuerpoTabla">
+                            </tbody>
+                        </table>
+
+                        <div class="empty-state" id="emptyState">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <rect x="3" y="3" width="18" height="18" rx="2" />
+                                <path d="M3 9h18M9 21V9" />
+                            </svg>
+                            <p>No hay tablones agregados</p>
+                            <span>Agrega tablones manualmente o sube un archivo</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Resultados -->
+                <section class="results-panel" id="seccionResultados">
+                    <div class="panel-header">
+                        <h2>Resultados de Optimización</h2>
+                        <button class="btn-icon" id="btnDescargar" title="Descargar Solución (.txt)">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                                <polyline points="7 10 12 15 17 10" />
+                                <line x1="12" y1="15" x2="12" y2="3" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <!-- Métricas -->
+                    <div class="metrics-grid">
+                        <div class="metric-card">
+                            <div class="metric-icon cost">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="12" y1="1" x2="12" y2="23" />
+                                    <path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" />
+                                </svg>
+                            </div>
+                            <div class="metric-content">
+                                <span class="metric-label">Costo Total</span>
+                                <span class="metric-value" id="valorCosto">-</span>
+                            </div>
+                        </div>
+
+                        <div class="metric-card">
+                            <div class="metric-icon algorithm">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10" />
+                                    <polyline points="12 6 12 12 16 14" />
+                                </svg>
+                            </div>
+                            <div class="metric-content">
+                                <span class="metric-label">Algoritmo</span>
+                                <span class="metric-value" id="valorAlgoritmo">-</span>
+                            </div>
+                        </div>
+
+                        <div class="metric-card">
+                            <div class="metric-icon time">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+                                </svg>
+                            </div>
+                            <div class="metric-content">
+                                <span class="metric-label">Tiempo</span>
+                                <span class="metric-value" id="valorTiempo">-</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Secuencia de Riego -->
+                    <div class="sequence-section">
+                        <h3>Secuencia Óptima de Riego</h3>
+                        <div class="sequence-flow" id="secuenciaRiego">
+                        </div>
+                    </div>
+
+                    <!-- Tabla de Análisis -->
+                    <div class="analysis-section">
+                        <h3>Detalle de Tiempos</h3>
+                        <div class="table-container">
+                            <table class="data-table analysis-table">
+                                <thead>
+                                    <tr>
+                                        <th>Orden</th>
+                                        <th>Tablón</th>
+                                        <th>Inicio</th>
+                                        <th>Fin</th>
+                                        <th>Costo</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="cuerpoAnalisis">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+
+        <!-- Loading Overlay -->
+        <div class="loading-overlay" id="loadingOverlay" style="display: none;">
+            <div class="loading-spinner">
+                <div class="spinner"></div>
+                <span>Optimizando...</span>
+            </div>
+        </div>
+
+        <!-- Modal Ejemplos -->
+        <div class="modal-overlay" id="modalEjemplo" style="display: none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Seleccionar Ejemplo</h3>
+                    <button class="btn-close" id="btnCerrarModal">&times;</button>
+                </div>
+                <div class="modal-body" id="listadoEjemplos">
+                    <!-- Los ejemplos se cargarán aquí dinámicamente -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Error Toast -->
+        <div class="toast-container" id="toastContainer"></div>
+    </div>
+
+
+    <script src="app.js?v=1.2"></script>
+</body>
+
+</html>

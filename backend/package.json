@@ -1,0 +1,26 @@
+{
+  "name": "riego-optimo",
+  "version": "1.0.0",
+  "description": "Calculador de riego óptimo para fincas - Análisis de Algoritmos II",
+  "main": "servidor.js",
+  "scripts": {
+    "start": "node servidor.js",
+    "dev": "node servidor.js"
+  },
+  "keywords": [
+    "algoritmos",
+    "programación-dinámica",
+    "algoritmo-voraz",
+    "fuerza-bruta",
+    "optimización"
+  ],
+  "author": "Estudiantes",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "body-parser": "^1.20.2"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}
