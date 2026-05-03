@@ -97,10 +97,13 @@ def roFB(finca: List[Tuple[int, int, int, int]]) -> Tuple[List[int], int]:
 
             costo_total = costo_de_regar_idx_ahora + costo_del_resto
 
-            # Selección del mínimo global
-            if costo_total < mejor_costo:
+            # Selección del mínimo global con desempate lexicográfico DESCENDENTE
+            # (cuando hay múltiples órdenes con el mismo costo, se elige el lexicográficamente mayor)
+            orden_candidata = [idx] + orden_del_resto
+            if (costo_total < mejor_costo or 
+                (costo_total == mejor_costo and orden_candidata > mejor_orden)):
                 mejor_costo = costo_total
-                mejor_orden = [idx] + orden_del_resto
+                mejor_orden = orden_candidata
 
         return mejor_costo, mejor_orden
 
@@ -282,9 +285,12 @@ def roPD(finca: List[Tuple[int, int, int, int]]) -> Tuple[List[int], int]:
 
             costo_total = costo_de_regar_idx_ahora + costo_del_resto
 
-            if costo_total < mejor_costo:
+            # Desempate lexicográfico DESCENDENTE para consistencia entre FB y PD
+            orden_candidata = [idx] + orden_del_resto
+            if (costo_total < mejor_costo or 
+                (costo_total == mejor_costo and orden_candidata > mejor_orden)):
                 mejor_costo = costo_total
-                mejor_orden = [idx] + orden_del_resto
+                mejor_orden = orden_candidata
 
         memo[clave_estado] = (mejor_costo, mejor_orden)
         return memo[clave_estado]
