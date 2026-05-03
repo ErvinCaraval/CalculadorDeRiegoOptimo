@@ -169,6 +169,7 @@ function ejecutarPython(algoritmo, archivoEntrada, archivoSalida) {
         
         const pythonVenv = path.resolve(__dirname, '..', 'venv', 'bin', 'python3');
         const pythonProcess = spawn(pythonVenv, [
+            '-B',
             scriptPython,
             algoritmo,
             archivoEntrada,
@@ -285,6 +286,7 @@ app.post('/resolver', async (req, res) => {
  */
 app.get('/ejemplos', (req, res) => {
     const EJEMPLOS_DIR = path.join(__dirname, '..', 'data', 'ejemplos');
+    const OUTPUT_DIR = path.join(__dirname, '..', 'data', 'output');
     const ejemplos = {};
 
     try {
@@ -293,6 +295,13 @@ app.get('/ejemplos', (req, res) => {
         }
 
         const archivos = fs.readdirSync(EJEMPLOS_DIR).filter(f => f.endsWith('.txt'));
+        
+        // Ordenar archivos de menor a mayor basado en el número
+        archivos.sort((a, b) => {
+            const numA = parseInt(a.replace(/\D/g, '')) || 0;
+            const numB = parseInt(b.replace(/\D/g, '')) || 0;
+            return numA - numB;
+        });
 
         archivos.forEach(archivo => {
             const contenido = fs.readFileSync(path.join(EJEMPLOS_DIR, archivo), 'utf8');
@@ -307,11 +316,24 @@ app.get('/ejemplos', (req, res) => {
             }
 
             const id = archivo.replace('.txt', '');
-            const nombre = id.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+            const baseId = id.replace('_in', ''); // Ej: test1
+            const nombre = baseId.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+            
+            let salidaEsperada = null;
+            const outputArchivo = path.join(OUTPUT_DIR, `${baseId}_out.txt`);
+            if (fs.existsSync(outputArchivo)) {
+                try {
+                    const outContent = fs.readFileSync(outputArchivo, 'utf8');
+                    salidaEsperada = parsearSolucion(outContent);
+                } catch (e) {
+                    console.error(`Error parseando salida esperada para ${baseId}:`, e.message);
+                }
+            }
             
             ejemplos[id] = {
                 nombre: nombre,
-                tablones: tablones
+                tablones: tablones,
+                salidaEsperada: salidaEsperada
             };
         });
 
