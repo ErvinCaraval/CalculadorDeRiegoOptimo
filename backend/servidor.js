@@ -207,11 +207,11 @@ function ejecutarPython(algoritmo, archivoEntrada, archivoSalida) {
             reject(new Error(`Error al ejecutar Python: ${error.message}`));
         });
 
-        // Timeout de 60 segundos (FB puede ser lento)
+        // Timeout de 5 minutos (FB y PD pueden ser lentos con muchos tablones)
         setTimeout(() => {
             pythonProcess.kill();
-            reject(new Error('Timeout: La ejecución del algoritmo tardó demasiado (>60s)'));
-        }, 60000);
+            reject(new Error('Timeout: La ejecución del algoritmo excedió el límite de 5 minutos'));
+        }, 300000);
     });
 }
 
