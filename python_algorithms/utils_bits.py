@@ -1,103 +1,104 @@
 """
-Utilidades para el manejo de máscaras de bits (Bitmask)
+Utilidades para el manejo del estado de tablones mediante Tuplas
 """
 from typing import Generator
 
 """
 ====================================================================
-EXPLICACIÓN DE LAS MÁSCARAS DE BITS (BITMASKS) PARA HUMANOS
+REPRESENTACIÓN INTERNA: TUPLA DE ÍNDICES PENDIENTES
 ====================================================================
-En lugar de usar listas pesadas, usamos un número entero para 
-representar los tablones. Imagina que es un panel de bombillos:
-  💡 (1) = ¡Peligro! El tablón falta por regar.
-  🌑 (0) = Tranquilo, el tablón ya está regado.
+En lugar de un número entero con bits, usamos una tupla de enteros
+donde cada elemento es el ÍNDICE de un tablón que aún falta regar.
 
-Un estado como 0b1111 significa que los 4 están pendientes (💡💡💡💡).
+  Ejemplo con 4 tablones, todos pendientes:  (0, 1, 2, 3)
+  Después de regar el tablón 1:              (0, 2, 3)
+  Sin tablones pendientes (caso base):       ()
 
-TRUCO 1: ¿Este tablón necesita agua? -> (pendientes >> i) & 1
+Las ventajas frente al bitmask son:
+  - Más legible e intuitiva de depurar.
+  - Hashable (puede usarse como clave de diccionario), igual que el
+    int original, por lo que la memoización de roPD sigue funcionando.
+
+TRUCO 1: ¿Este tablón necesita agua? -> idx_tablon in pendientes
 --------------------------------------------------------------------
-Imagina que los bombillos están en una cinta transportadora:
-1. (>> i) : Mueve la cinta 'i' espacios a la derecha hasta que el
-            bombillo que nos interesa quede justo enfrente (posición 0).
-2. (& 1)  : Nos ponemos un tubo de cartón en el ojo para ignorar el
-            resto de los bombillos y ver SOLO el que tenemos enfrente.
-            Si vemos luz (1), falta por regar. Si no (0), ya está.
+Simplemente verificamos si el índice está presente en la tupla.
+Es equivalente al (pendientes >> i) & 1 de la versión bitmask.
 
-TRUCO 2: ¡Listo, ya regué este tablón! -> pendientes ^ (1 << i)
+TRUCO 2: ¡Listo, ya regué este tablón! -> tuple(i for i in pendientes if i != idx)
 --------------------------------------------------------------------
-Queremos apagar el bombillo 'i' a distancia sin tocar los demás:
-1. (1 << i) : Movemos la mira de un puntero láser 'i' espacios hacia
-              la izquierda para apuntar exactamente a ese bombillo.
-2. ( ^ )    : Presionamos el botón de apagado (XOR). Esto dispara el 
-              láser y apaga ÚNICAMENTE el bombillo al que estamos 
-              apuntando, dejando a todos los demás intactos.
+Construimos una nueva tupla excluyendo el índice del tablón regado.
+Es equivalente al pendientes ^ (1 << i) de la versión bitmask.
 ====================================================================
 """
 
-def tablon_esta_pendiente(pendientes: int, idx_tablon: int) -> bool:
+
+def tablon_esta_pendiente(pendientes: tuple, idx_tablon: int) -> bool:
     """
     Retorna True si el tablón `idx_tablon` aún no ha sido regado.
 
     ENTRADAS:
     ----------
-    pendientes : int
-        Bitmask que representa el estado actual de los tablones.
+    pendientes : tuple
+        Tupla con los índices de tablones aún pendientes de riego.
     idx_tablon : int
         Índice del tablón a consultar.
 
     SALIDAS:
     ----------
     bool
-        True si el bit está encendido (1), False si está apagado (0).
+        True si el índice está en la tupla, False si ya fue regado.
     """
-    return bool((pendientes >> idx_tablon) & 1)
+    return idx_tablon in pendientes
 
 
-def marcar_tablon_como_regado(pendientes: int, idx_tablon: int) -> int:
+def marcar_tablon_como_regado(pendientes: tuple, idx_tablon: int) -> tuple:
     """
-    Retorna un nuevo bitmask con el tablón `idx_tablon` marcado como regado.
-    Usa XOR para apagar el bit correspondiente.
+    Retorna una nueva tupla con el tablón `idx_tablon` eliminado
+    (es decir, marcado como ya regado).
 
     ENTRADAS:
     ----------
-    pendientes : int
-        Bitmask que representa el estado actual de los tablones.
+    pendientes : tuple
+        Tupla con los índices de tablones aún pendientes de riego.
     idx_tablon : int
         Índice del tablón que se acaba de regar.
 
     SALIDAS:
     ----------
-    int
-        Nuevo estado del bitmask con el bit apagado.
+    tuple
+        Nueva tupla sin el índice del tablón recién regado.
     """
-    return pendientes ^ (1 << idx_tablon)
+    return tuple(i for i in pendientes if i != idx_tablon)
 
 
-def tablones_pendientes_en(pendientes: int, total_tablones: int) -> Generator[int, None, None]:
+def tablones_pendientes_en(pendientes: tuple, total_tablones: int) -> Generator[int, None, None]:
     """
     Generador que emite los índices de tablones que aún están pendientes.
 
     ENTRADAS:
     ----------
-    pendientes : int
-        Bitmask del estado actual.
+    pendientes : tuple
+        Tupla con los índices de tablones aún pendientes de riego.
     total_tablones : int
-        Cantidad total de tablones en la finca.
+        Cantidad total de tablones (mantenido por compatibilidad de firma,
+        no se usa internamente ya que la tupla contiene solo los pendientes).
 
     SALIDAS:
     ----------
     Generator[int, None, None]
         Secuencia de índices correspondientes a los tablones sin regar.
     """
-    for idx in range(total_tablones):
-        if tablon_esta_pendiente(pendientes, idx):
-            yield idx
+    for idx in pendientes:
+        yield idx
 
 
-def bitmask_todos_pendientes(total_tablones: int) -> int:
+def bitmask_todos_pendientes(total_tablones: int) -> tuple:
     """
-    Retorna el bitmask inicial donde TODOS los tablones están pendientes.
-    Ejemplo: 4 tablones -> 0b1111 = 15
+    Retorna el estado inicial donde TODOS los tablones están pendientes.
+    Ejemplo: 4 tablones -> (0, 1, 2, 3)
+
+    El nombre se conserva por compatibilidad con modelo_riego.py,
+    aunque la representación ya no es un bitmask sino una tupla.
 
     ENTRADAS:
     ----------
@@ -106,7 +107,7 @@ def bitmask_todos_pendientes(total_tablones: int) -> int:
 
     SALIDAS:
     ----------
-    int
-        Entero cuyo valor binario tiene 'total_tablones' bits encendidos en 1.
+    tuple
+        Tupla con los índices 0..total_tablones-1, todos pendientes.
     """
-    return (1 << total_tablones) - 1
+    return tuple(range(total_tablones))
