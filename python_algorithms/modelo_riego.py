@@ -235,7 +235,7 @@ def roV(finca: List[Tuple[int, int, int, int]]) -> Tuple[List[int], int]:
 
 def roPD(finca: List[Tuple[int, int, int, int]]) -> Tuple[List[int], int]:
     """
-    Algoritmo de Programación Dinámica con Memorización (Top-Down).
+    Algoritmo de Programación Dinámica (Top-Down con Memorización).
 
     ENTRADAS:
     ----------
@@ -248,16 +248,27 @@ def roPD(finca: List[Tuple[int, int, int, int]]) -> Tuple[List[int], int]:
         - orden_final: El orden óptimo absoluto encontrado.
         - costo_final: El costo mínimo absoluto garantizado.
 
-    LÓGICA DEL ALGORITMO:
-    ----------------------
-    Utiliza el principio de optimalidad de Bellman para evitar cálculos redundantes:
-    1. Define un estado como (pendientes, tiempo_actual).
-    2. Antes de resolver un subproblema, verifica en un diccionario (memo) 
-       si ya ha sido resuelto para ese conjunto exacto de tablones pendientes.
-    3. Si es nuevo, explora las opciones (similar a FB) pero guarda el 
-       mejor resultado encontrado para ese estado.
-    4. Dado que el tiempo_actual es determinista según los tablones ya regados, 
-       el número de estados se reduce drásticamente de n! a 2^n.
+    LÓGICA DEL ALGORITMO (Los 4 pasos de Programación Dinámica):
+    -----------------------------------------------------------------------
+    1) Caracterizar la estructura de la solución óptima (subestructura óptima):
+       La solución óptima para regar un conjunto de tablones 'P' consiste en 
+       elegir un tablón 'idx' para regar ahora, y luego resolver de forma óptima 
+       el subproblema con los tablones restantes (P \ {idx}).
+
+    2) Definir recursivamente el valor de la solución óptima:
+       Sea C(P, t) el costo óptimo para los tablones pendientes P en el tiempo t:
+       C(P, t) = min_{i en P} [ costo_tablon(i, t) + C(P \ {i}, t + tr_i) ]
+       Caso base: C(vacío, t) = 0.
+
+    3) Calcular el valor de la solución óptima (algoritmo):
+       Calculamos C(P, t) recursivamente y almacenamos los resultados en una 
+       tabla/diccionario (memoización) para no recalcular subproblemas. En esta
+       fase SOLO calculamos el valor óptimo y guardamos qué decisión se tomó.
+
+    4) Construir la solución óptima (algoritmo):
+       A partir de las decisiones guardadas en el paso 3, reconstruimos el 
+       camino (el orden de los tablones) que nos llevó al costo óptimo, 
+       rastreando los estados desde el inicial hasta el final.
 
     ANÁLISIS DE COMPLEJIDAD:
     -------------------------
@@ -274,42 +285,71 @@ def roPD(finca: List[Tuple[int, int, int, int]]) -> Tuple[List[int], int]:
         return [], 0
 
     tablones = construir_tablones(finca)
-    memo: Dict[Tuple[int, int], Tuple[int, List[int]]] = {}
+    
+    # Tablas para memorización
+    memo_valor: Dict[int, float] = {}
+    memo_decision: Dict[int, int] = {}
 
-    def resolver_con_memo(pendientes: int, tiempo_actual: int) -> Tuple[int, List[int]]:
+    # PASO 3: Calcular el valor de la solución óptima
+    def calcular_valor_optimo(pendientes: int, tiempo_actual: int) -> float:
+        # PASO 2 (Caso base): Costo cero si no hay tablones pendientes
         if pendientes == 0:
-            return 0, []
+            return 0.0
 
-        clave_estado = (pendientes, tiempo_actual)
-        if clave_estado in memo:
-            return memo[clave_estado]
+        # Si ya fue calculado, devolvemos el valor óptimo
+        if pendientes in memo_valor:
+            return memo_valor[pendientes]
 
         mejor_costo = float('inf')
-        mejor_orden: List[int] = []
+        mejor_idx = -1
 
+        # Iteramos sobre todos los posibles tablones a elegir
         for idx in tablones_pendientes_en(pendientes, n):
             tab = tablones[idx]
-            tr  = tab.tiempo_regado
-
-            costo_de_regar_idx_ahora = calcular_costo_tablon(tab, tiempo_actual)
-
-            costo_del_resto, orden_del_resto = resolver_con_memo(
+            
+            # PASO 1 y 2: Costo de la decisión local + Costo óptimo del subproblema
+            costo_local = calcular_costo_tablon(tab, tiempo_actual)
+            costo_resto = calcular_valor_optimo(
                 marcar_tablon_como_regado(pendientes, idx),
-                tiempo_actual + tr,
+                tiempo_actual + tab.tiempo_regado
             )
+            
+            costo_total = costo_local + costo_resto
 
-            costo_total = costo_de_regar_idx_ahora + costo_del_resto
-
-            # Desempate lexicográfico DESCENDENTE para consistencia entre FB y PD
-            orden_candidata = [idx] + orden_del_resto
-            if (costo_total < mejor_costo or 
-                (costo_total == mejor_costo and orden_candidata > mejor_orden)):
+            # Selección del mínimo y desempate lexicográfico DESCENDENTE
+            # (Al comparar solo idx > mejor_idx aseguramos el orden descendente global
+            # ya que 'idx' es el primer elemento de la secuencia resultante)
+            if costo_total < mejor_costo:
                 mejor_costo = costo_total
-                mejor_orden = orden_candidata
+                mejor_idx = idx
+            elif costo_total == mejor_costo:
+                if idx > mejor_idx:
+                    mejor_idx = idx
 
-        memo[clave_estado] = (mejor_costo, mejor_orden)
-        return memo[clave_estado]
+        # Guardamos el valor óptimo y la decisión (el tablón elegido) para este estado
+        memo_valor[pendientes] = mejor_costo
+        memo_decision[pendientes] = mejor_idx
+        return mejor_costo
+
+    # PASO 4: Construir la solución óptima
+    def construir_solucion_optima(pendientes: int) -> List[int]:
+        orden = []
+        estado_actual = pendientes
+        
+        # Recuperamos las decisiones tomadas haciendo 'backtracking' por los estados
+        while estado_actual != 0:
+            idx_elegido = memo_decision[estado_actual]
+            orden.append(idx_elegido)
+            estado_actual = marcar_tablon_como_regado(estado_actual, idx_elegido)
+            
+        return orden
 
     todos_pendientes = bitmask_todos_pendientes(n)
-    costo_final, orden_final = resolver_con_memo(todos_pendientes, tiempo_actual=0)
+    
+    # Ejecutamos el Paso 3 (Sólo calcula el valor óptimo y llena las tablas)
+    costo_final = int(calcular_valor_optimo(todos_pendientes, tiempo_actual=0))
+    
+    # Ejecutamos el Paso 4 (Reconstruye la ruta óptima en base a las decisiones)
+    orden_final = construir_solucion_optima(todos_pendientes)
+    
     return orden_final, costo_final
