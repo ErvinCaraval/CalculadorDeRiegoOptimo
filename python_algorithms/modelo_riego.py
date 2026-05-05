@@ -75,8 +75,8 @@ def roFB(finca: List[Tuple[int, int, int, int]]) -> Tuple[List[int], int]:
 
     tablones = construir_tablones(finca)
 
-    def explorar_sin_memo(pendientes: int, tiempo_actual: int) -> Tuple[int, List[int]]:
-        if pendientes == 0:
+    def explorar_sin_memo(pendientes: tuple, tiempo_actual: int) -> Tuple[int, List[int]]:
+        if not pendientes:
             return 0, []
 
         mejor_costo = float('inf')
@@ -291,9 +291,9 @@ def roPD(finca: List[Tuple[int, int, int, int]]) -> Tuple[List[int], int]:
     memo_decision: Dict[int, int] = {}
 
     # PASO 3: Calcular el valor de la solución óptima
-    def calcular_valor_optimo(pendientes: int, tiempo_actual: int) -> float:
+    def calcular_valor_optimo(pendientes: tuple, tiempo_actual: int) -> float:
         # PASO 2 (Caso base): Costo cero si no hay tablones pendientes
-        if pendientes == 0:
+        if not pendientes:
             return 0.0
 
         # Si ya fue calculado, devolvemos el valor óptimo
@@ -332,12 +332,12 @@ def roPD(finca: List[Tuple[int, int, int, int]]) -> Tuple[List[int], int]:
         return mejor_costo
 
     # PASO 4: Construir la solución óptima
-    def construir_solucion_optima(pendientes: int) -> List[int]:
+    def construir_solucion_optima(pendientes: tuple) -> List[int]:
         orden = []
         estado_actual = pendientes
         
         # Recuperamos las decisiones tomadas haciendo 'backtracking' por los estados
-        while estado_actual != 0:
+        while estado_actual:
             idx_elegido = memo_decision[estado_actual]
             orden.append(idx_elegido)
             estado_actual = marcar_tablon_como_regado(estado_actual, idx_elegido)
