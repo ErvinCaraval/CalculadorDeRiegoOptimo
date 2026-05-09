@@ -1,33 +1,24 @@
 """
 Utilidades para el manejo del estado de tablones mediante Tuplas
 """
-from typing import Generator
+
 
 """
 ====================================================================
 REPRESENTACIÓN INTERNA: TUPLA DE ÍNDICES PENDIENTES
 ====================================================================
-En lugar de un número entero con bits, usamos una tupla de enteros
-donde cada elemento es el ÍNDICE de un tablón que aún falta regar.
+Para llevar el control de qué tablones faltan por regar, usamos una
+tupla inmutable de enteros, donde cada elemento representa el ÍNDICE
+de un tablón.
 
   Ejemplo con 4 tablones, todos pendientes:  (0, 1, 2, 3)
   Después de regar el tablón 1:              (0, 2, 3)
   Sin tablones pendientes (caso base):       ()
 
-Las ventajas frente al bitmask son:
-  - Más legible e intuitiva de depurar.
-  - Hashable (puede usarse como clave de diccionario), igual que el
-    int original, por lo que la memoización de roPD sigue funcionando.
-
-TRUCO 1: ¿Este tablón necesita agua? -> idx_tablon in pendientes
---------------------------------------------------------------------
-Simplemente verificamos si el índice está presente en la tupla.
-Es equivalente al (pendientes >> i) & 1 de la versión bitmask.
-
-TRUCO 2: ¡Listo, ya regué este tablón! -> tuple(i for i in pendientes if i != idx)
---------------------------------------------------------------------
-Construimos una nueva tupla excluyendo el índice del tablón regado.
-Es equivalente al pendientes ^ (1 << i) de la versión bitmask.
+La principal ventaja de este enfoque matemático es:
+  - Legibilidad estructurada.
+  - Al ser Hashable, es ideal como clave para diccionarios en la 
+    Programación Dinámica (memorización de estados).
 ====================================================================
 """
 
@@ -68,37 +59,34 @@ def marcar_tablon_como_regado(pendientes: tuple, idx_tablon: int) -> tuple:
     tuple
         Nueva tupla sin el índice del tablón recién regado.
     """
-    return tuple(i for i in pendientes if i != idx_tablon)
+    # Forma mucho más limpia y humana de eliminar de una tupla sin usar ciclos for
+    pos = pendientes.index(idx_tablon)
+    return pendientes[:pos] + pendientes[pos+1:]
 
 
-def tablones_pendientes_en(pendientes: tuple, total_tablones: int) -> Generator[int, None, None]:
+def tablones_pendientes_en(pendientes: tuple, total_tablones: int) -> tuple:
     """
-    Generador que emite los índices de tablones que aún están pendientes.
+    Retorna los índices de tablones que aún están pendientes.
 
     ENTRADAS:
     ----------
     pendientes : tuple
         Tupla con los índices de tablones aún pendientes de riego.
     total_tablones : int
-        Cantidad total de tablones (mantenido por compatibilidad de firma,
-        no se usa internamente ya que la tupla contiene solo los pendientes).
+        Cantidad total de tablones.
 
     SALIDAS:
     ----------
-    Generator[int, None, None]
+    tuple
         Secuencia de índices correspondientes a los tablones sin regar.
     """
-    for idx in pendientes:
-        yield idx
+    return pendientes
 
 
-def bitmask_todos_pendientes(total_tablones: int) -> tuple:
+def estado_inicial_pendientes(total_tablones: int) -> tuple:
     """
-    Retorna el estado inicial donde TODOS los tablones están pendientes.
-    Ejemplo: 4 tablones -> (0, 1, 2, 3)
-
-    El nombre se conserva por compatibilidad con modelo_riego.py,
-    aunque la representación ya no es un bitmask sino una tupla.
+    Genera el estado inmutable inicial donde TODOS los tablones están pendientes.
+    Ejemplo para 4 tablones -> (0, 1, 2, 3)
 
     ENTRADAS:
     ----------
@@ -108,6 +96,6 @@ def bitmask_todos_pendientes(total_tablones: int) -> tuple:
     SALIDAS:
     ----------
     tuple
-        Tupla con los índices 0..total_tablones-1, todos pendientes.
+        Tupla con los índices 0..total_tablones-1, todos listos para ser iterados.
     """
     return tuple(range(total_tablones))

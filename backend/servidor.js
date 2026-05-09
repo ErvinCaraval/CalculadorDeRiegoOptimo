@@ -271,18 +271,18 @@ function ejecutarPython(algoritmo, archivoEntrada, archivoSalida) {
             );
         });
 
-        // Timeout de seguridad (5 minutos)
+        // Timeout de seguridad (7 minutos)
         const timeout = setTimeout(() => {
 
             pythonProcess.kill();
 
             reject(
                 new Error(
-                    'Timeout: La ejecución excedió el límite de 5 minutos'
+                    'Timeout: La ejecución excedió el límite de 7 minutos'
                 )
             );
 
-        }, 300000);
+        }, 420000);
 
         // Limpiar timeout cuando termine
         pythonProcess.on('close', () => {

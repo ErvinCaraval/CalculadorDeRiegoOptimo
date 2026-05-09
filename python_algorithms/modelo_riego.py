@@ -15,12 +15,12 @@ import sys
 sys.dont_write_bytecode = True
 sys.setrecursionlimit(100_000)
 
-from typing import List, Tuple, Dict
+from typing import List, Tuple, Dict, Any
 
 from tablon import construir_tablones
 from costo_tablon import calcular_costo_tablon
-from utils_bits import (
-    bitmask_todos_pendientes,
+from utils_estado import (
+    estado_inicial_pendientes,
     marcar_tablon_como_regado,
     tablones_pendientes_en,
 )
@@ -63,11 +63,14 @@ def roFB(finca: List[Tuple[int, int, int, int]]) -> Tuple[List[int], int]:
 
     ANÁLISIS DE COMPLEJIDAD:
     -------------------------
-    - COMPLEJIDAD TEÓRICA: O(n!)
-    - COMPLEJIDAD REAL: O(n!)
-    - JUSTIFICACIÓN: Para n tablones, hay n opciones para el primero, (n-1) 
-      para el segundo, y así sucesivamente. No hay poda ni memorización, 
+    - COMPLEJIDAD TEMPORAL: O(n!)
+    - COMPLEJIDAD ESPACIAL: O(n)
+    - JUSTIFICACIÓN TEMPORAL: Para n tablones, hay n opciones para el primero, 
+      (n-1) para el segundo, y así sucesivamente. No hay poda ni memorización, 
       por lo que se visitan todas las hojas del árbol de decisión.
+    - JUSTIFICACIÓN ESPACIAL: La profundidad máxima del árbol de recursión es n. 
+      En cada nivel de la pila de llamadas se almacena un estado temporal de tamaño n. 
+      Por lo tanto, la memoria requerida en cualquier instante es puramente lineal O(n).
     """
     n = len(finca)
     if n == 0:
@@ -75,7 +78,7 @@ def roFB(finca: List[Tuple[int, int, int, int]]) -> Tuple[List[int], int]:
 
     tablones = construir_tablones(finca)
 
-    def explorar_sin_memo(pendientes: tuple, tiempo_actual: int) -> Tuple[int, List[int]]:
+    def explorar_sin_memo(pendientes: Any, tiempo_actual: int) -> Tuple[int, List[int]]:
         if not pendientes:
             return 0, []
 
@@ -107,7 +110,7 @@ def roFB(finca: List[Tuple[int, int, int, int]]) -> Tuple[List[int], int]:
 
         return mejor_costo, mejor_orden
 
-    todos_pendientes = bitmask_todos_pendientes(n)
+    todos_pendientes = estado_inicial_pendientes(n)
     costo_final, orden_final = explorar_sin_memo(todos_pendientes, tiempo_actual=0)
     return orden_final, costo_final
 
@@ -159,23 +162,23 @@ def roV(finca: List[Tuple[int, int, int, int]]) -> Tuple[List[int], int]:
 
     ANÁLISIS DE COMPLEJIDAD:
     -------------------------
-    - COMPLEJIDAD TEÓRICA: O(n^3 log n)
-    - COMPLEJIDAD REAL: O(n^3 log n)
-    - JUSTIFICACIÓN: El algoritmo ejecuta un bucle principal para tomar 'n' 
+    - COMPLEJIDAD TEMPORAL: O(n^3 log n)
+    - COMPLEJIDAD ESPACIAL: O(n)
+    - JUSTIFICACIÓN TEMPORAL: El algoritmo ejecuta un bucle principal para tomar 'n' 
       decisiones. Por cada decisión, evalúa hasta 'n' candidatos posibles. 
       Para cada candidato, simula el futuro ordenando los tablones restantes, 
       lo cual toma O(n log n), y luego suma linealmente sus costos O(n). 
-      El costo dominante es n * n * (n log n) = O(n^3 log n). 
-      Esta complejidad le permite escalar fluidamente a cientos de tablones en 
-      fracciones de segundo, sin requerir la memoria exponencial O(2^n) de la 
-      Programación Dinámica, manteniendo un margen de error mínimo respecto al óptimo.
+      El costo dominante es n * n * (n log n) = O(n^3 log n).
+    - JUSTIFICACIÓN ESPACIAL: No usa recursión pesada ni guarda estados exponenciales. 
+      Solo mantiene arreglos temporales (listas y tuplas de pendientes) de tamaño máximo 
+      'n' a lo largo del proceso. Su consumo de memoria es lineal O(n).
     """
     n = len(finca)
     if n == 0:
         return [], 0
         
     tablones = construir_tablones(finca)
-    pendientes = list(range(n))
+    pendientes = estado_inicial_pendientes(n)
     tiempo_actual = 0
     orden_final = []
     costo_total = 0
@@ -184,13 +187,15 @@ def roV(finca: List[Tuple[int, int, int, int]]) -> Tuple[List[int], int]:
         mejor_idx = -1
         mejor_score = float('inf')
         
-        for idx in pendientes:
+        for idx in tablones_pendientes_en(pendientes, n):
             tab_i = tablones[idx]
             costo_i_ahora = calcular_costo_tablon(tab_i, tiempo_actual)
             
             # --- MÉTODO PILOTO: SIMULACIÓN DEL HORIZONTE COMPLETO ---
             t_sim = tiempo_actual + tab_i.tiempo_regado
-            resto = [j for j in pendientes if j != idx]
+            
+            resto_pendientes = marcar_tablon_como_regado(pendientes, idx)
+            resto = list(tablones_pendientes_en(resto_pendientes, n))
             
             # Heurística WMDD (Weighted Modified Due Date)
             resto_ordenado = sorted(resto, key=lambda j: 
@@ -225,7 +230,7 @@ def roV(finca: List[Tuple[int, int, int, int]]) -> Tuple[List[int], int]:
         tiempo_actual += tab_elegido.tiempo_regado
         
         orden_final.append(mejor_idx)
-        pendientes.remove(mejor_idx)
+        pendientes = marcar_tablon_como_regado(pendientes, mejor_idx)
         
     return orden_final, costo_total
 
@@ -272,13 +277,15 @@ def roPD(finca: List[Tuple[int, int, int, int]]) -> Tuple[List[int], int]:
 
     ANÁLISIS DE COMPLEJIDAD:
     -------------------------
-    - COMPLEJIDAD TEÓRICA DE TIEMPO: O(n * 2^n)
-    - COMPLEJIDAD REAL DE ESPACIO: O(2^n)
-    - JUSTIFICACIÓN:
-        Existen 2^n subconjuntos posibles de tablones (estados del bitmask). 
-        Para cada estado, realizamos una transición de costo O(n) al iterar 
-        los posibles tablones a regar. Esto es exponencial, pero mucho 
-        más eficiente que el factorial de la Fuerza Bruta.
+    - COMPLEJIDAD TEMPORAL: O(n * 2^n)
+    - COMPLEJIDAD ESPACIAL: O(2^n)
+    - JUSTIFICACIÓN TEMPORAL: Existen 2^n subconjuntos posibles de tablones. 
+      Para cada estado, realizamos una transición iterando 'n' tablones posibles. 
+      Gracias a la memorización, cada estado se calcula solo una vez.
+    - JUSTIFICACIÓN ESPACIAL: Los diccionarios ('memo_valor' y 'memo_decision') 
+      deben almacenar los resultados óptimos de CADA subproblema visitado. 
+      Dado que hay 2^n subproblemas únicos, la memoria crece de forma exponencial O(2^n), 
+      lo cual limita su uso en la práctica a ~25 tablones debido al límite de RAM.
     """
     n = len(finca)
     if n == 0:
@@ -287,11 +294,11 @@ def roPD(finca: List[Tuple[int, int, int, int]]) -> Tuple[List[int], int]:
     tablones = construir_tablones(finca)
     
     # Tablas para memorización
-    memo_valor: Dict[int, float] = {}
-    memo_decision: Dict[int, int] = {}
+    memo_valor: Dict[Any, float] = {}
+    memo_decision: Dict[Any, int] = {}
 
     # PASO 3: Calcular el valor de la solución óptima
-    def calcular_valor_optimo(pendientes: tuple, tiempo_actual: int) -> float:
+    def calcular_valor_optimo(pendientes: Any, tiempo_actual: int) -> float:
         # PASO 2 (Caso base): Costo cero si no hay tablones pendientes
         if not pendientes:
             return 0.0
@@ -332,7 +339,7 @@ def roPD(finca: List[Tuple[int, int, int, int]]) -> Tuple[List[int], int]:
         return mejor_costo
 
     # PASO 4: Construir la solución óptima
-    def construir_solucion_optima(pendientes: tuple) -> List[int]:
+    def construir_solucion_optima(pendientes: Any) -> List[int]:
         orden = []
         estado_actual = pendientes
         
@@ -344,7 +351,7 @@ def roPD(finca: List[Tuple[int, int, int, int]]) -> Tuple[List[int], int]:
             
         return orden
 
-    todos_pendientes = bitmask_todos_pendientes(n)
+    todos_pendientes = estado_inicial_pendientes(n)
     
     # Ejecutamos el Paso 3 (Sólo calcula el valor óptimo y llena las tablas)
     costo_final = int(calcular_valor_optimo(todos_pendientes, tiempo_actual=0))
