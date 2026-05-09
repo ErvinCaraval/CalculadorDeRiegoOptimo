@@ -15,7 +15,7 @@ const { spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const bodyParser = require('body-parser');
-
+const os = require('os');
 const app = express();
 const PORT = 3000;
 
@@ -50,44 +50,44 @@ function validarFinca(finca) {
 
         // Validar presencia de campos
         if (t.ts === undefined || t.tr === undefined || t.p === undefined || t.ro === undefined) {
-            return { 
-                valido: false, 
-                error: `Tablón ${i}: faltan campos (ts, tr, p, ro requeridos)` 
+            return {
+                valido: false,
+                error: `Tablón ${i}: faltan campos (ts, tr, p, ro requeridos)`
             };
         }
 
         // Validar tipos
-        if (!Number.isInteger(t.ts) || !Number.isInteger(t.tr) || 
+        if (!Number.isInteger(t.ts) || !Number.isInteger(t.tr) ||
             !Number.isInteger(t.p) || !Number.isInteger(t.ro)) {
-            return { 
-                valido: false, 
-                error: `Tablón ${i}: todos los valores deben ser enteros` 
+            return {
+                valido: false,
+                error: `Tablón ${i}: todos los valores deben ser enteros`
             };
         }
 
         // Validar rangos
         if (t.ts <= 0) {
-            return { 
-                valido: false, 
-                error: `Tablón ${i}: ts debe ser positivo` 
+            return {
+                valido: false,
+                error: `Tablón ${i}: ts debe ser positivo`
             };
         }
         if (t.tr <= 0) {
-            return { 
-                valido: false, 
-                error: `Tablón ${i}: tr debe ser positivo` 
+            return {
+                valido: false,
+                error: `Tablón ${i}: tr debe ser positivo`
             };
         }
         if (t.p < 1 || t.p > 4) {
-            return { 
-                valido: false, 
-                error: `Tablón ${i}: p debe estar entre 1 y 4` 
+            return {
+                valido: false,
+                error: `Tablón ${i}: p debe estar entre 1 y 4`
             };
         }
         if (t.ro < 0 || t.ro > t.ts - t.tr) {
-            return { 
-                valido: false, 
-                error: `Tablón ${i}: ro debe satisfacer 0 ≤ ro ≤ ts - tr` 
+            return {
+                valido: false,
+                error: `Tablón ${i}: ro debe satisfacer 0 ≤ ro ≤ ts - tr`
             };
         }
     }
@@ -109,11 +109,11 @@ function validarFinca(finca) {
  */
 function serializarFinca(finca) {
     let contenido = `${finca.tablones.length}\n`;
-    
+
     for (const tablon of finca.tablones) {
         contenido += `${tablon.ts},${tablon.tr},${tablon.p},${tablon.ro}\n`;
     }
-    
+
     return contenido;
 }
 
@@ -131,16 +131,16 @@ function serializarFinca(finca) {
  */
 function parsearSolucion(contenido) {
     const lineas = contenido.trim().split('\n');
-    
+
     if (lineas.length < 1) {
         throw new Error('Archivo de salida vacío');
     }
-    
+
     const costo = parseInt(lineas[0], 10);
     if (isNaN(costo)) {
         throw new Error('Costo no es un número válido');
     }
-    
+
     const permutacion = [];
     for (let i = 1; i < lineas.length; i++) {
         const idx = parseInt(lineas[i], 10);
@@ -149,12 +149,13 @@ function parsearSolucion(contenido) {
         }
         permutacion.push(idx);
     }
-    
+
     return { costo, permutacion };
 }
 
 /**
  * Ejecuta el script de Python de forma asincrónica.
+ * Compatible con Windows, Linux y macOS usando venv.
  * 
  * @param {string} algoritmo - "FB", "V" o "PD"
  * @param {string} archivoEntrada - Ruta del archivo de entrada
@@ -163,11 +164,47 @@ function parsearSolucion(contenido) {
  */
 function ejecutarPython(algoritmo, archivoEntrada, archivoSalida) {
     return new Promise((resolve, reject) => {
-        // Iniciar proceso Python - Ahora usamos resolver_riego.py como entry point
-        const scriptPython = path.resolve(__dirname, '..', 'python_algorithms', 'resolver_riego.py');
-        console.log(`[${new Date().toISOString()}] Ejecutando: python3 ${scriptPython} ${algoritmo} ${archivoEntrada} ${archivoSalida}`);
-        
-        const pythonVenv = path.resolve(__dirname, '..', 'venv', 'bin', 'python3');
+
+        // Ruta del script principal Python
+        const scriptPython = path.resolve(
+            __dirname,
+            '..',
+            'python_algorithms',
+            'resolver_riego.py'
+        );
+
+        // Detectar sistema operativo
+        const isWindows = os.platform() === 'win32';
+
+        // Ruta del ejecutable Python dentro del venv
+        const pythonVenv = isWindows
+            ? path.resolve(__dirname, '..', 'venv', 'Scripts', 'python.exe')
+            : path.resolve(__dirname, '..', 'venv', 'bin', 'python3');
+
+        // Verificar que exista el entorno virtual
+        if (!fs.existsSync(pythonVenv)) {
+            return reject(
+                new Error(
+                    `No se encontró el entorno virtual Python en:\n${pythonVenv}\n\n` +
+                    `Cree el entorno virtual usando:\n` +
+                    `python -m venv venv`
+                )
+            );
+        }
+
+        // Verificar que exista el script Python
+        if (!fs.existsSync(scriptPython)) {
+            return reject(
+                new Error(`No se encontró el script Python: ${scriptPython}`)
+            );
+        }
+
+        console.log(
+            `[${new Date().toISOString()}] Ejecutando:\n` +
+            `${pythonVenv} ${scriptPython} ${algoritmo} ${archivoEntrada} ${archivoSalida}`
+        );
+
+        // Crear proceso Python
         const pythonProcess = spawn(pythonVenv, [
             '-B',
             scriptPython,
@@ -176,42 +213,81 @@ function ejecutarPython(algoritmo, archivoEntrada, archivoSalida) {
             archivoSalida
         ]);
 
-        let stderr = '';
         let stdout = '';
+        let stderr = '';
 
+        // Capturar salida estándar
         pythonProcess.stdout.on('data', (data) => {
             stdout += data.toString();
         });
 
+        // Capturar errores
         pythonProcess.stderr.on('data', (data) => {
             stderr += data.toString();
         });
 
+        // Evento cuando termina el proceso
         pythonProcess.on('close', (code) => {
-            console.log(`[${new Date().toISOString()}] Python terminó con código: ${code}`);
-            if (stderr) console.log(`Python stderr: ${stderr}`);
-            
-            if (code !== 0) {
-                reject(new Error(`Proceso Python finalizó con código ${code}: ${stderr}`));
-            } else {
-                // Verificar que el archivo de salida existe
-                if (!fs.existsSync(archivoSalida)) {
-                    reject(new Error(`Archivo de salida no creado: ${archivoSalida}`));
-                } else {
-                    resolve(stdout);
-                }
+
+            console.log(
+                `[${new Date().toISOString()}] Python terminó con código: ${code}`
+            );
+
+            if (stdout.trim()) {
+                console.log('Python stdout:\n', stdout);
             }
+
+            if (stderr.trim()) {
+                console.error('Python stderr:\n', stderr);
+            }
+
+            // Código distinto de 0 = error
+            if (code !== 0) {
+                return reject(
+                    new Error(
+                        `Proceso Python finalizó con código ${code}\n${stderr}`
+                    )
+                );
+            }
+
+            // Verificar que el archivo de salida exista
+            if (!fs.existsSync(archivoSalida)) {
+                return reject(
+                    new Error(
+                        `El algoritmo terminó pero no generó el archivo de salida:\n${archivoSalida}`
+                    )
+                );
+            }
+
+            resolve(stdout);
         });
 
+        // Error al iniciar el proceso
         pythonProcess.on('error', (error) => {
-            reject(new Error(`Error al ejecutar Python: ${error.message}`));
+            reject(
+                new Error(
+                    `Error al ejecutar Python:\n${error.message}`
+                )
+            );
         });
 
-        // Timeout de 5 minutos (FB y PD pueden ser lentos con muchos tablones)
-        setTimeout(() => {
+        // Timeout de seguridad (5 minutos)
+        const timeout = setTimeout(() => {
+
             pythonProcess.kill();
-            reject(new Error('Timeout: La ejecución del algoritmo excedió el límite de 5 minutos'));
+
+            reject(
+                new Error(
+                    'Timeout: La ejecución excedió el límite de 5 minutos'
+                )
+            );
+
         }, 300000);
+
+        // Limpiar timeout cuando termine
+        pythonProcess.on('close', () => {
+            clearTimeout(timeout);
+        });
     });
 }
 
@@ -277,7 +353,7 @@ app.post('/resolver', async (req, res) => {
         try {
             if (archivoEntrada && fs.existsSync(archivoEntrada)) fs.unlinkSync(archivoEntrada);
             if (archivoSalida && fs.existsSync(archivoSalida)) fs.unlinkSync(archivoSalida);
-        } catch (e) {}
+        } catch (e) { }
     }
 });
 
@@ -295,7 +371,7 @@ app.get('/ejemplos', (req, res) => {
         }
 
         const archivos = fs.readdirSync(EJEMPLOS_DIR).filter(f => f.endsWith('.txt'));
-        
+
         // Ordenar archivos de menor a mayor basado en el número
         archivos.sort((a, b) => {
             const numA = parseInt(a.replace(/\D/g, '')) || 0;
@@ -318,7 +394,7 @@ app.get('/ejemplos', (req, res) => {
             const id = archivo.replace('.txt', '');
             const baseId = id.replace('_in', ''); // Ej: test1
             const nombre = baseId.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
-            
+
             let salidaEsperada = null;
             const outputArchivo = path.join(OUTPUT_DIR, `${baseId}_out.txt`);
             if (fs.existsSync(outputArchivo)) {
@@ -329,7 +405,7 @@ app.get('/ejemplos', (req, res) => {
                     console.error(`Error parseando salida esperada para ${baseId}:`, e.message);
                 }
             }
-            
+
             ejemplos[id] = {
                 nombre: nombre,
                 tablones: tablones,
