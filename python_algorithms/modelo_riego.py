@@ -38,10 +38,10 @@ def roFB(finca: List[Tuple[int, int, int, int]]) -> Tuple[List[int], int]:
     ----------
     finca : List[Tuple[int, int, int, int]]
         Lista de tablones, donde cada tupla contiene:
-        - tc: Tiempo de crecimiento (no afecta el costo directamente).
         - ts: Tiempo de supervivencia (límite antes de empezar a perder valor).
         - tr: Tiempo de regado (duración de la tarea).
-        - cp: Coeficiente de prioridad (peso del tablón en el costo).
+        - p:  Prioridad del tablón (peso del tablón en el costo).
+        - ro: Tiempo de riego óptimo (instante ideal para iniciar el riego sin penalidad).
 
     SALIDAS:
     ----------
@@ -128,10 +128,10 @@ def roV(finca: List[Tuple[int, int, int, int]]) -> Tuple[List[int], int]:
     ----------
     finca : List[Tuple[int, int, int, int]]
         Lista de tablones, donde cada tupla contiene:
-        - tc: Tiempo de crecimiento (no afecta el costo directamente).
         - ts: Tiempo de supervivencia (límite antes de empezar a perder valor).
         - tr: Tiempo de regado (duración de la tarea).
-        - cp: Coeficiente de prioridad (peso del tablón en el costo).
+        - p:  Prioridad del tablón (peso del tablón en el costo).
+        - ro: Tiempo de riego óptimo (instante ideal para iniciar el riego sin penalidad).
 
     SALIDAS:
     ----------
@@ -245,7 +245,7 @@ def roPD(finca: List[Tuple[int, int, int, int]]) -> Tuple[List[int], int]:
     ENTRADAS:
     ----------
     finca : List[Tuple[int, int, int, int]]
-        (Igual que en roFB) Datos de los tablones (tc, ts, tr, cp).
+        (Igual que en roFB) Datos de los tablones (ts, tr, p, ro).
 
     SALIDAS:
     ----------
