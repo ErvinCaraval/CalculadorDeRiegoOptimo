@@ -18,13 +18,19 @@ let tablones = [];
 let solucionActual = null;
 let salidaEsperadaActual = null;
 
-console.log('Variables globales inicializadas');
+// Configuración de logging
+const DEBUG = false; // Cambiar a true para verbose logging
 
-// ============================================================================
-// UTILIDADES
-// ============================================================================
-
-// Funciones de error ahora usan toast notifications (ver más abajo)
+/**
+ * Log condicional: solo muestra si DEBUG está habilitado
+ * @param {string} mensaje
+ * @param {*} datos
+ */
+function debugLog(mensaje, datos = '') {
+    if (DEBUG) {
+        console.log(`[DEBUG] ${mensaje}`, datos);
+    }
+}
 
 /**
  * Muestra un indicador de estado (loading)
@@ -246,7 +252,7 @@ function actualizarNumerosTablones() {
         emptyState.style.display = total === 0 ? 'flex' : 'none';
     }
 
-    console.log(`Tabla actualizada: ${total} tablones`);
+    debugLog('Tabla actualizada', `${total} tablones`);
 }
 
 /**
@@ -259,10 +265,10 @@ function cargarFinca(tablonesNuevos) {
 }
 
 /**
- * Limpia todos los datos de la finca, resultados y formularios (Sin confirmación para mayor rapidez)
+ * Limpia todos los datos de la finca, resultados y formularios
  */
 function limpiarTablones() {
-    console.log('Ejecutando limpieza total inmediata...');
+    debugLog('Ejecutando limpieza total');
     
     // Limpiar tabla
     const cuerpo = document.getElementById('cuerpoTabla');
@@ -275,7 +281,7 @@ function limpiarTablones() {
     const seccionResultados = document.getElementById('seccionResultados');
     if (seccionResultados) {
         seccionResultados.classList.remove('active');
-        // Limpiar valores internos para asegurar que no quede rastro
+        // Limpiar valores internos
         const vCosto = document.getElementById('valorCosto');
         const vAlgo = document.getElementById('valorAlgoritmo');
         const vTiempo = document.getElementById('valorTiempo');
@@ -303,8 +309,6 @@ function limpiarTablones() {
     if (mTr) mTr.value = 3;
     if (mP) mP.value = 4;
     if (mRo) mRo.value = 0;
-    
-    console.log('Limpieza total completada con éxito');
     
     // Scroll arriba suavemente
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -339,6 +343,11 @@ async function resolverProblema() {
 
         if (tablones.length === 0) {
             mostrarError('Por favor, agregue al menos un tablón');
+            return;
+        }
+        
+        if (tablones.length > 30) {
+            mostrarError('Máximo 30 tablones permitidos para evitar timeout');
             return;
         }
 
