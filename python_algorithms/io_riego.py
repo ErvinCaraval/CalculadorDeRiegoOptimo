@@ -23,7 +23,7 @@ def parsear_finca_desde_archivo(ruta_archivo: str) -> List[Tuple[int, int, int, 
     ----------
     List[Tuple[int, int, int, int]]
         Lista de tablones representados como tuplas (ts, tr, p, ro).
-
+        
     FORMATO ESPERADO:
     ------------------
         n
@@ -37,20 +37,34 @@ def parsear_finca_desde_archivo(ruta_archivo: str) -> List[Tuple[int, int, int, 
     if not lineas:
         raise ValueError("Archivo vacío")
 
-    n = int(lineas[0].strip())
+    try:
+        n = int(lineas[0].strip())
+    except (ValueError, IndexError):
+        raise ValueError("Primera línea debe contener el número de tablones (entero)")
+    
+    if n <= 0:
+        raise ValueError("El número de tablones debe ser positivo")
+
     finca = []
 
     for i in range(1, n + 1):
         if i >= len(lineas):
-            break
-        partes = lineas[i].strip().split(',')
-        if len(partes) < 4:
-            continue
-        ts = int(partes[0])
-        tr = int(partes[1])
-        p  = int(partes[2])
-        ro = int(partes[3])
-        finca.append((ts, tr, p, ro))
+            raise ValueError(f"Se esperaban {n} tablones pero solo se encontraron {i-1}")
+        
+        try:
+            partes = lineas[i].strip().split(',')
+            if len(partes) < 4:
+                raise ValueError(f"Tablón {i}: faltan parámetros (esperados 4)")
+            
+            ts = int(partes[0])
+            tr = int(partes[1])
+            p = int(partes[2])
+            ro = int(partes[3])
+            
+            finca.append((ts, tr, p, ro))
+        
+        except ValueError as e:
+            raise ValueError(f"Error parseando tablón {i}: {str(e)}")
 
     return finca
 

@@ -15,68 +15,40 @@ Antes de comenzar, asegúrese de tener instalado:
 
 ## Guía Paso a Paso para Ejecutar
 
-Siga estos pasos exactos para iniciar la aplicación:
+Siga estos pasos exactos para iniciar la aplicación en Windows:
 
-### Paso 1: Abrir la Terminal
-Navegue hasta la carpeta raíz del proyecto:
-```bash
-cd /home/ervin/Desktop/proyecto_prog_dinamica_prog_voraz
-```
+### Ejecución en Windows
 
-### Paso 2: Crear y Activar el Entorno Virtual (Python)
-Este paso es fundamental para preparar el entorno de ejecución de los algoritmos:
-
-1.  **Crear el entorno virtual:**
-    ```bash
-    En linux 
-    sudo apt update
-    sudo apt install pypy3 pypy3-venv
-    pypy3 -m venv venv
-
-    En Mac
-    brew install pypy3
-    pypy3 -m venv venv
-
-    En windows powershell
-    choco install pypy3
-    pypy3 -m venv venv  # o pypy -m venv venv
-
+1. Crear el entorno virtual:
+    ```powershell
+    python -m venv venv
     ```
-2.  **Activar el entorno:**
-    *   En **Linux o macOS**:
-        ```bash
-        source venv/bin/activate
-        pip install -r requirements.txt
-        ```
-    *   En **Windows**:
-        ```bash
-        .\venv\Scripts\activate.ps1
-        pip install -r requirements.txt
-        ```
-    *Sabrá que está activo porque aparecerá `(venv)` al inicio de su terminal.*
 
-3. **Desactivar el entorno (Opcional.):**
-   * 
-   ```bash
-   deactivate
-   ```
-   
-### Paso 3: Instalar Dependencias de Node.js
-Instale los paquetes necesarios para el servidor backend:
-```bash
-npm install
-```
+2. Habilitar scripts:
+    ```powershell
+    Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+    ```
 
-### Paso 4: Iniciar el Servidor
-Ejecute el siguiente comando para poner en marcha el sistema:
-```bash
-npm start
-```
-*Debería ver un mensaje confirmando que el servidor está corriendo en el puerto 3000.*
+3. Activar el entorno:
+    ```powershell
+    .\venv\Scripts\activate
+    ```
 
-### Paso 5: Abrir la Interfaz Web
-Abra su navegador y entre a la siguiente dirección:
-http://localhost:3000
+4. Instalar requisitos:
+    ```powershell
+    pip install -r requirements.txt
+    ```
+
+5. Acceder a la carpeta del backend e instalar paquetes:
+    ```powershell
+    cd .\backend\
+    npm i
+    ```
+
+6. Ejecutar proyecto:
+    ```powershell
+    npm start
+    ```
 
 ---
 

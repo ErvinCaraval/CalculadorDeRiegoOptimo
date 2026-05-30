@@ -65,29 +65,11 @@ function validarFinca(finca) {
             };
         }
 
-        // Validar rangos
-        if (t.ts <= 0) {
+        // Validar que sean positivos
+        if (t.ts <= 0 || t.tr <= 0 || t.p <= 0 || t.ro < 0) {
             return {
                 valido: false,
-                error: `Tablón ${i}: ts debe ser positivo`
-            };
-        }
-        if (t.tr <= 0) {
-            return {
-                valido: false,
-                error: `Tablón ${i}: tr debe ser positivo`
-            };
-        }
-        if (t.p < 1 || t.p > 4) {
-            return {
-                valido: false,
-                error: `Tablón ${i}: p debe estar entre 1 y 4`
-            };
-        }
-        if (t.ro < 0 || t.ro > t.ts - t.tr) {
-            return {
-                valido: false,
-                error: `Tablón ${i}: ro debe satisfacer 0 ≤ ro ≤ ts - tr`
+                error: `Tablón ${i}: ts, tr, p deben ser positivos y ro >= 0`
             };
         }
     }
@@ -264,29 +246,31 @@ function ejecutarPython(algoritmo, archivoEntrada, archivoSalida) {
 
         // Error al iniciar el proceso
         pythonProcess.on('error', (error) => {
+            clearTimeout(timeout);
             reject(
                 new Error(
-                    `Error al ejecutar Python:\n${error.message}`
+                    `Error al ejecutar Python: ${error.message}`
                 )
             );
         });
 
-        // Timeout de seguridad (7 minutos)
+        // Timeout de seguridad (7 minutos = 420000ms)
+        const TIMEOUT_MS = 420000;
         const timeout = setTimeout(() => {
 
             pythonProcess.kill();
 
             reject(
                 new Error(
-                    'Timeout: La ejecución excedió el límite de 7 minutos'
+                    `Timeout: La ejecución excedió el límite de ${TIMEOUT_MS / 1000}s`
                 )
             );
 
-        }, 420000);
+        }, TIMEOUT_MS);
 
         // Limpiar timeout cuando termine
         pythonProcess.on('close', () => {
-            clearTimeout(timeout);
+            if (timeout) clearTimeout(timeout);
         });
     });
 }
@@ -346,14 +330,16 @@ app.post('/resolver', async (req, res) => {
         });
 
     } catch (error) {
-        console.error(`Error en /resolver:`, error.message);
+        console.error('Error:', error.message);
         res.status(500).json({ exito: false, error: error.message });
     } finally {
-        // Limpieza garantizada de temporales
-        try {
-            if (archivoEntrada && fs.existsSync(archivoEntrada)) fs.unlinkSync(archivoEntrada);
-            if (archivoSalida && fs.existsSync(archivoSalida)) fs.unlinkSync(archivoSalida);
-        } catch (e) { }
+        // Limpiar archivos temporales
+        if (archivoEntrada && fs.existsSync(archivoEntrada)) {
+            fs.unlinkSync(archivoEntrada);
+        }
+        if (archivoSalida && fs.existsSync(archivoSalida)) {
+            fs.unlinkSync(archivoSalida);
+        }
     }
 });
 
