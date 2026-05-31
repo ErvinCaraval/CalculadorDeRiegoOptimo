@@ -16,6 +16,7 @@ sys.dont_write_bytecode = True
 sys.setrecursionlimit(100_000)
 
 from typing import List, Tuple, Dict, Any
+import math
 
 from tablon import construir_tablones
 from costo_tablon import calcular_costo_tablon
@@ -120,119 +121,132 @@ def roFB(finca: List[Tuple[int, int, int, int]]) -> Tuple[List[int], int]:
 # Algoritmo 2: Voraz (roV)
 # ──────────────────────────────────────────────────────────────────────
 
-def roV(finca: List[Tuple[int, int, int, int]]) -> Tuple[List[int], int]:
+
+def roV(finca: List[Tuple[int, int, int, int]], k_slack: float = 2.0, k_ro: float = 1.0) -> Tuple[List[int], int]:
     """
-    Algoritmo Voraz con Método Piloto (Lookahead) y Heurística WMDD.
+    Implementación de una Heurística Voraz Pura para la secuenciación de riego.
 
     ENTRADAS:
     ----------
     finca : List[Tuple[int, int, int, int]]
         Lista de tablones, donde cada tupla contiene:
         - ts: Tiempo de supervivencia (límite antes de empezar a perder valor).
-        - tr: Tiempo de regado (duración de la tarea).
-        - p:  Prioridad del tablón (peso del tablón en el costo).
-        - ro: Tiempo de riego óptimo (instante ideal para iniciar el riego sin penalidad).
+        - tr: Tiempo de regado (duración del proceso de riego).
+        - p: Prioridad del tablón (peso económico o importancia).
+        - ro: Riego óptimo (momento ideal recomendado para iniciar el riego).
+    k_slack : float, opcional
+        Parámetro de escala para la holgura de supervivencia (por defecto 2.0).
+    k_ro : float, opcional
+        Parámetro de escala para la ventana de riego óptimo (por defecto 1.0).
 
     SALIDAS:
-    ----------
+    -------
     Tuple[List[int], int]
-        - orden_final: Una lista con los índices de los tablones en el orden 
-          heurístico decidido para minimizar el costo.
-        - costo_final: El valor entero del costo total alcanzado por la heurística.
+        - orden: Lista de enteros con la secuencia de riego decidida localmente.
+        - costo_total_finca: Costo real acumulado de la secuencia obtenida.
 
     LÓGICA DEL ALGORITMO:
-    ----------------------
-    Evita la "miopía" clásica de los algoritmos voraces evaluando no solo el 
-    costo inmediato, sino el "daño en cadena" proyectado sobre el resto de la finca.
-    
-    1. En cada etapa, toma a cada tablón candidato y calcula su costo inmediato.
-    2. Aplica el "Método Piloto" (Simulación Lookahead): Avanza el tiempo simulando 
-       que el candidato fue elegido.
-    3. Para simular el impacto en el resto de los tablones pendientes, los ordena 
-       rápidamente usando la heurística WMDD (Weighted Modified Due Date). Esta 
-       regla penaliza severamente los tablones con alta prioridad y poco margen de 
-       supervivencia frente al tiempo proyectado.
-    4. Suma el costo inmediato y el costo del escenario futuro simulado para 
-       obtener un 'score_total'.
-    5. En caso de empates en el score, desempata de forma lexicográfica DESCENDENTE 
-       (elige el tablón con el índice mayor) para mantener consistencia con los 
-       algoritmos exactos.
-    6. Selecciona de forma irrevocable el tablón con el menor 'score_total' y 
-       avanza al siguiente turno.
+    ---------------------
+    El algoritmo implementa un enfoque constructivo miope guiado por un índice de despacho 
+    continuo adaptado de la regla ATCS (Apparent Tardiness Cost with Setup). En cada iteración, 
+    el algoritmo evalúa los elementos del conjunto de candidatos pendientes calculando 
+    dinámicamente un score. Este puntaje pondera tres componentes locales respecto al tiempo 
+    actual 't': la eficiencia de la regla WSPT (prioridad/tiempo de riego), una penalización 
+    exponencial por espera óptima insatisfecha, y una penalización exponencial basada en la 
+    holgura límite de supervivencia del cultivo. El candidato con el score máximo es seleccionado 
+    de forma irrevocable, integrándose a la secuencia y mutando el estado del sistema al 
+    avanzar el reloj global, eliminando la necesidad de bifurcaciones condicionales o 
+    simulaciones exhaustivas de subproblemas futuros.
 
     ANÁLISIS DE COMPLEJIDAD:
-    -------------------------
-    - COMPLEJIDAD TEMPORAL: O(n^3 log n)
-    - COMPLEJIDAD ESPACIAL: O(n)
-    - JUSTIFICACIÓN TEMPORAL: El algoritmo ejecuta un bucle principal para tomar 'n' 
-      decisiones. Por cada decisión, evalúa hasta 'n' candidatos posibles. 
-      Para cada candidato, simula el futuro ordenando los tablones restantes, 
-      lo cual toma O(n log n), y luego suma linealmente sus costos O(n). 
-      El costo dominante es n * n * (n log n) = O(n^3 log n).
-    - JUSTIFICACIÓN ESPACIAL: No usa recursión pesada ni guarda estados exponenciales. 
-      Solo mantiene arreglos temporales (listas y tuplas de pendientes) de tamaño máximo 
-      'n' a lo largo del proceso. Su consumo de memoria es lineal O(n).
+    ------------------------
+    1. Complejidad Temporal:
+       - El Paso 1 realiza la conversión de datos inicial tomando un tiempo de O(n).
+       - El Paso 2 calcula el arreglo estático de desempate recorriendo los datos en O(n).
+       - El Paso 3 ejecuta un bucle principal mientras queden elementos candidatos. Este ciclo 
+         se repite exactamente n veces. Dentro de cada iteración, se evalúa el score de todos los 
+         elementos que aún permanecen en el conjunto de pendientes, realizando comparaciones 
+         continuas en O(1) por elemento. Esto describe una sumatoria decreciente de tamaño 
+         n + (n-1) + (n-2) + ... + 1, equivalente a un comportamiento cuadrático. Por lo tanto, 
+         el tiempo de ejecución en el peor de los casos y caso promedio está acotado por O(n^2).
+    2. Complejidad Espacial:
+       - Las estructuras de control auxiliares almacenan el conjunto de pendientes, el orden 
+         resultante y el arreglo de ratios estáticos de tamaño proporcional al número de elementos 
+         de entrada. No se derivan pilas de recursión ni tablas multidimensionales de estados 
+         mapeados. Por consiguiente, la complejidad en espacio de memoria se mantiene acotada 
+         linealmente por O(n).
     """
     n = len(finca)
     if n == 0:
         return [], 0
-        
+
+    # Convertimos la lista de tuplas en objetos Tablon oficiales del proyecto
+    # para que las funciones como 'calcular_costo_tablon' funcionen sin reventar.
     tablones = construir_tablones(finca)
-    pendientes = estado_inicial_pendientes(n)
-    tiempo_actual = 0
-    orden_final = []
-    costo_total = 0
     
+    # Manejo del estado local irrevocable
+    pendientes = set(range(n)) 
+    orden = []
+    tiempo_actual = 0
+    costo_total_finca = 0
+
+    # Índices estáticos para desempates deterministas basados en WSPT
+    wspt_ratios = [t.prioridad / t.tiempo_regado for t in tablones]
+
     while pendientes:
         mejor_idx = -1
-        mejor_score = float('inf')
+        mejor_score = float("-inf")
+
+        for j in pendientes:
+            tab_j = tablones[j]
+            ts_j = tab_j.tiempo_supervivencia
+            tr_j = tab_j.tiempo_regado
+            p_j = tab_j.prioridad
+            ro_j = tab_j.riego_optimo
+            t = tiempo_actual
+            
+            # ─────────────────────────────────────────────────────────
+            # REGLA DE DECISIÓN LOCAL ESTRICTA: f(j, t)
+            # Todo el comportamiento se rige por matemática pura y continua.
+            # ─────────────────────────────────────────────────────────
+            
+            # 1. Base WSPT (Eficiencia intrínseca)
+            peso = p_j / tr_j
+            
+            # 2. Factor de Riego Óptimo (Llegada)
+            espera = max(0.0, ro_j - t)
+            factor_ro = math.exp(-espera / (k_ro * tr_j))
+            
+            # 3. Factor de Holgura (Urgencia de Supervivencia)
+            holgura = max(0.0, ts_j - t - tr_j)
+            factor_soltura = math.exp(-holgura / (k_slack * tr_j))
+            
+            # 4. ÍNDICE DE DESPACHO ÚNICO Y CONTINUO (f(j, t))
+            score = peso * factor_ro * factor_soltura
+            
+            # ─────────────────────────────────────────────────────────
+
+            # Selección del máximo local con desempate determinista riguroso
+            if score > mejor_score:
+                mejor_score = score
+                mejor_idx = j
+            elif score == mejor_score:
+                if wspt_ratios[j] > wspt_ratios[mejor_idx]:
+                    mejor_idx = j
+                elif wspt_ratios[j] == wspt_ratios[mejor_idx] and j > mejor_idx:
+                    mejor_idx = j
+
+        # Calculamos el costo REAL usando el objeto Tablon esperado por el proyecto
+        costo_now = calcular_costo_tablon(tablones[mejor_idx], tiempo_actual)
+
+        # Elección irrevocable (Escogencia Voraz)
+        orden.append(mejor_idx)
+        costo_total_finca += costo_now
+        tiempo_actual += tablones[mejor_idx].tiempo_regado 
         
-        for idx in tablones_pendientes_en(pendientes, n):
-            tab_i = tablones[idx]
-            costo_i_ahora = calcular_costo_tablon(tab_i, tiempo_actual)
-            
-            # --- MÉTODO PILOTO: SIMULACIÓN DEL HORIZONTE COMPLETO ---
-            t_sim = tiempo_actual + tab_i.tiempo_regado
-            
-            resto_pendientes = marcar_tablon_como_regado(pendientes, idx)
-            resto = list(tablones_pendientes_en(resto_pendientes, n))
-            
-            # Heurística WMDD (Weighted Modified Due Date)
-            resto_ordenado = sorted(resto, key=lambda j: 
-                max(
-                    tablones[j].tiempo_supervivencia - tablones[j].tiempo_regado, 
-                    t_sim + tablones[j].tiempo_regado
-                ) / tablones[j].prioridad
-            )
-            
-            # Simulamos el costo en cadena para el resto de la finca
-            costo_futuro = 0
-            t_temp = t_sim
-            for j in resto_ordenado:
-                costo_futuro += calcular_costo_tablon(tablones[j], t_temp)
-                t_temp += tablones[j].tiempo_regado
-                
-            # Métrica maestra de decisión
-            score_total = costo_i_ahora + costo_futuro
-            
-            # Búsqueda del menor daño global
-            if score_total < mejor_score:
-                mejor_score = score_total
-                mejor_idx = idx
-            elif score_total == mejor_score:
-                # Desempate lexicográfico DESCENDENTE para consistencia con FB y PD
-                if idx > mejor_idx:
-                    mejor_idx = idx
-                    
-        # --- APLICAR DECISIÓN VORAZ IRREVOCABLE ---
-        tab_elegido = tablones[mejor_idx]
-        costo_total += calcular_costo_tablon(tab_elegido, tiempo_actual)
-        tiempo_actual += tab_elegido.tiempo_regado
-        
-        orden_final.append(mejor_idx)
-        pendientes = marcar_tablon_como_regado(pendientes, mejor_idx)
-        
-    return orden_final, costo_total
+        pendientes.remove(mejor_idx)
+
+    return orden, int(costo_total_finca)
 
 # ──────────────────────────────────────────────────────────────────────
 # Algoritmo 3: Programación Dinámica (roPD)
