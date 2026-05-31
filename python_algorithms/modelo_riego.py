@@ -7,7 +7,7 @@ y supervivencia de los tablones.
 
 Implementaciones incluidas:
   1. roFB: Fuerza Bruta (Exacto, exhaustivo).
-  2. roV:  Algoritmo Voraz con Rollout (Heurístico, alta calidad).
+  2. roV:  Algoritmo Voraz 
   3. roPD: Programación Dinámica (Exacto, eficiente en espacio de estados).
 """
 
