@@ -10,7 +10,6 @@ Algoritmos evaluados:
   - voraz_spt   : Shortest Processing Time (menor tr primero)
   - voraz_wspt  : Weighted SPT (mayor p/tr primero)
   - voraz_wmdd  : Weighted Modified Due Date (regla pura, sin lookahead)
-  - roV         : Voraz WMDD + Lookahead (implementación del proyecto)
   - roPD        : Programación Dinámica (referencia óptima)
 
 Referencia de salidas:
@@ -55,7 +54,7 @@ sys.path.insert(0, str(DIR_ALGORITMOS))
 # ─────────────────────────────────────────────────────────────────────────────
 
 try:
-    from modelo_riego import roV
+    
     from tablon import Tablon, construir_tablones
     from costo_tablon import calcular_costo_tablon
 except ImportError as e:
